@@ -1,0 +1,5 @@
+.venv/*
+data/*
+*.pyc
+*test*
+config.json
