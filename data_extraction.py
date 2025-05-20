@@ -3,12 +3,28 @@ import pandas as pd
 import os
 import logging
 import re
+from typing import List, Tuple
 
 import utils
 
 
 sub_dir = os.path.join('data', 'subtitles')
 time_sep = '-->'
+
+
+def clean_dialogue(dialogue: pd.Series) -> pd.Series:
+    return dialogue.str.lower().str.replace('.', '').str.replace('"', '').str.replace(',', '').str.replace('-', '')
+
+
+def convert_time_to_readable_txt(df: pd.DataFrame, cols: List[Tuple[str, str]]):
+    
+    for old_col, new_col in cols:
+        hours = (df[old_col] // 3600).astype(int).astype(str)
+        mins = ((df[old_col] // 60) % 60).astype(int).astype(str)
+        secs = (df[old_col] % 60).astype(int).astype(str)
+        df[new_col] = hours + 'hr ' + mins + 'min ' + secs + 's'
+    
+    return df
 
 
 def extract_subs():
@@ -59,8 +75,55 @@ def extract_subs():
     return movie_subs_dict
 
 
-def extract_vsd_annotations(path):
-    # os.path.join(vsd_annotations_dir, annot_filepath)
+def get_segments(path: str, movies: List[str], file_format: str, tokenizer) -> pd.DataFrame:
+    
+    segment_fps = [x for x in os.listdir(path) if x.endswith(file_format.split('-')[-1])]
+    
+    # Optional filtering
+    if len(movies) > 0:
+        segment_fps = [file_format.format(movie_name=movie) for movie in movies if file_format.format(movie_name=movie) in segment_fps]
+    
+    df_list = []
+    for movie in segment_fps:
+        curr_df = pd.read_parquet(os.path.join(path, movie))
+        curr_df['movie'] = movie.split('-')[0]
+        df_list.append(curr_df)
+        
+    seg_df = pd.concat(df_list)
+
+    # Whisper adds whitespace which affects tokens
+    seg_df['cleaned_text'] = clean_dialogue(seg_df['text'].str.strip())
+    seg_df['cleaned_tokens'] = seg_df['cleaned_text'].apply(lambda x: tokenizer.encode(x))
+
+    # TODO: add this earlier in data cleaning process
+    seg_df['start'] = seg_df['start'].round(1)
+    seg_df['end'] = seg_df['end'].round(1)
+
+    seg_df = seg_df.drop(columns=['movie_name', 'start_frame', 'end_frame', 'tokens', 'cleaned_tokens', 'cleaned_text'])
+    
+    return seg_df 
+
+
+def get_vsd_movie_annotations(path: str, movies: List[str]) -> pd.DataFrame:
+    
+    df_list = []
+    annotation_fps = os.listdir(path)
+    
+    movies = movies if len(movies) > 0 else set(x.split('_')[0] for x in os.listdir(path))
+
+    for movie in movies:
+        for annot_filepath in [x for x in annotation_fps if movie in x]:
+            cat = utils.remove_ext(annot_filepath.split('_')[1])
+            raw_annot_df = extract_vsd_annotations_file(os.path.join(path, annot_filepath))
+            raw_annot_df['movie'] = movie
+            raw_annot_df['annotation_cat'] = cat
+            df_list.append(raw_annot_df)
+            
+    return pd.concat(df_list)
+    
+
+def extract_vsd_annotations_file(path):
+    
     with open(path, 'r') as fileobj:
         raw_lines = [x.strip() for x in fileobj.readlines() if x != '\n']
         
