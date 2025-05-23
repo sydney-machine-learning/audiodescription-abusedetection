@@ -13,7 +13,7 @@ class AudioSegDataset(torch.utils.data.Dataset):
     
     def __init__(self, encodings, labels):
         self.encodings = {key: torch.tensor(val) for key, val in encodings.items()}
-        self.labels = torch.tensor(labels.values.astype('int').reshape(-1, 1), dtype=torch.float32)
+        self.labels = torch.tensor(labels.values.astype('int').reshape(-1, 1), dtype=torch.float16)
         
     def __getitem__(self, idx):
         item = {key: val[idx] for key, val in self.encodings.items()}
@@ -60,12 +60,13 @@ class FractionalTrainEvalCallback(TrainerCallback):
 
 
 class CustomLossModel(torch.nn.Module):
-    def __init__(self, model_name: str, loss_fn: Callable, unfrozen_layers: List[int]):
+    def __init__(self, model_name: str, loss_fn: Callable, unfrozen_layers: List[int], dropout: float):
         super().__init__()
+        args = {'classifier_dropout': dropout} if 'deberta' not in model_name.lower() else {'hidden_dropout_prob': dropout}
         self.model = AutoModelForSequenceClassification.from_pretrained(
             model_name,
-            num_labels=1
-            # classifier_dropout=0.3
+            num_labels=1,
+            **args
         )
         
         #, torch_dtype=torch.bfloat16, attn_implementation="flash_attention_2").to('cuda')
@@ -112,21 +113,20 @@ def compute_metrics(eval_pred):
     preds = (probs >= 0.5).astype(int).reshape(-1)
     labels = labels.reshape(-1)
     precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average='binary', zero_division=0)
-    has_gore_mask = labels == 1
 
     return {
         "accuracy": accuracy_score(labels, preds),
-        "gore_accuracy": accuracy_score(labels[has_gore_mask], preds[has_gore_mask]),
         "precision": precision,
         "recall": recall,
         "f1": f1,
-        "f1_macro": f1_score(labels, preds, average='macro')
+        "f1_macro": f1_score(labels, preds, average='macro'),
+        "weighted_score": 0.8 * recall + 0.2 * precision
     }
     
 
-def create_test_train_split(df: pd.DataFrame, tokenized_input, movie_list: List[str], tokenizer, enc_len):
+def create_test_train_split(df: pd.DataFrame, tokenized_input, movie_list: List[str], tokenizer):
     set_mask = df['movie'].isin(movie_list)
-    set_enc = tokenizer([txt for in_set, txt in zip(set_mask, tokenized_input) if in_set], add_special_tokens=False, padding='max_length', max_length=enc_len)
+    set_enc = tokenizer([txt for in_set, txt in zip(set_mask, tokenized_input) if in_set], padding=True)
     set_y = df['has_gore'][set_mask]
 
     ds = AudioSegDataset(set_enc, set_y)
