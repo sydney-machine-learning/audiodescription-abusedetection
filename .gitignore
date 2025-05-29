@@ -5,3 +5,5 @@ data/*
 config.json
 results/*
 models/*
+
+*.png
