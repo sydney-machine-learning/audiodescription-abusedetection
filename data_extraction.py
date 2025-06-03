@@ -34,7 +34,10 @@ all_transcripts_df_dir = os.path.join(transcription_dir, 'all_transcripts.parque
 diarization_dir = os.path.join(audio_vault_dir, 'diarization_segments')
 trans_mp3_dir = os.path.join(audio_vault_dir, 'longitudinal_movies')
 
+credits_ts_fp = os.path.join(transcription_dir, 'manual', 'credit_removal_timestamps.csv')
+
 time_sep = '-->'
+sample_rate = 16000
 
 os.makedirs(sub_dir, exist_ok=True)
 os.makedirs(diarization_dir, exist_ok=True)
@@ -68,8 +71,21 @@ def get_or_create_subtitles_data(parquet_path: str, download_dir: str):
     return movie_list_df
 
 
+def get_credits_timestamps():
+    return pd.read_csv(credits_ts_fp)
+
+
 def clean_dialogue(dialogue: pd.Series) -> pd.Series:
     return dialogue.str.lower().str.replace('.', '').str.replace('"', '').str.replace(',', '').str.replace('-', '')
+
+
+def wipe_movie_files(movie_name: str):
+    if os.path.exists(os.path.join(transcription_dir, transcript_df_fp.format(movie_name=movie_name))):
+        os.remove(os.path.join(transcription_dir, transcript_df_fp.format(movie_name=movie_name)))
+    if os.path.exists(os.path.join(diarization_dir, f'{movie_name}-diarization.parquet')):
+        os.remove(os.path.join(diarization_dir, f'{movie_name}-diarization.parquet'))
+    if os.path.exists(os.path.join(voice_activity_dir, f'{movie_name}-vad.parquet')):
+        os.remove(os.path.join(voice_activity_dir, f'{movie_name}-vad.parquet'))
 
 
 def convert_time_to_readable_txt(df: pd.DataFrame, cols: List[Tuple[str, str]]):
@@ -149,4 +165,4 @@ def aggregate_segments(df: pd.DataFrame):
         
     agg_seg_df = pd.DataFrame.from_records(agg_rows_list)
 
-    return agg_seg_df  
+    return agg_seg_df 

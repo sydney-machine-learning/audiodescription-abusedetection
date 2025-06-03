@@ -7,3 +7,5 @@ results/*
 models/*
 
 *.png
+
+graveyard.py

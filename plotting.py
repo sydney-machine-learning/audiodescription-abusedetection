@@ -4,3 +4,4 @@ import seaborn as sns
 import os
 
 output_dir = os.path.join('output')
+os.makedirs(output_dir, exist_ok=True)
