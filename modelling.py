@@ -5,19 +5,22 @@ import torch
 from transformers import TrainerCallback, AutoModelForSequenceClassification
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, f1_score, roc_auc_score
 
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.util import ngrams
+from collections import Counter
+
 from typing import List, Callable
 
 import re
 
 class AudioSegDataset(torch.utils.data.Dataset):
     
-    def __init__(self, encodings, labels):
+    def __init__(self, encodings):
         self.encodings = {key: torch.tensor(val) for key, val in encodings.items()}
-        self.labels = torch.tensor(labels.values.astype('int').reshape(-1, 1), dtype=torch.float16)
         
     def __getitem__(self, idx):
         item = {key: val[idx] for key, val in self.encodings.items()}
-        item['labels'] = self.labels[idx]
         return item
     
     def __len__(self):
@@ -140,3 +143,27 @@ def check_trainable_layers(model):
             print(f"[FROZEN] {name}")
         else:
             print(f"[TRAINABLE] {name}")
+            
+
+def process_text(text: str, excl_stopwords: bool):
+    
+    stop_words = set(stopwords.words('english'))
+    tokens = word_tokenize(text.lower())
+    filtered_tokens = [word for word in tokens if word.isalpha()]
+    if excl_stopwords:
+        filtered_tokens = [word for word in filtered_tokens if word not in stop_words]
+        
+    return filtered_tokens
+
+
+def get_ngram_counts(text, n, top_n=10, excl_stopwords: bool = True):
+    
+    tokens = process_text(text, excl_stopwords)
+    ngram_list = list(ngrams(tokens, n))
+    ngram_counts = Counter(ngram_list)
+    ngram_df = pd.DataFrame(ngram_counts.most_common(top_n), columns=['Ngram', 'Frequency'])
+    ngram_df['Ngram'] = ngram_df['Ngram'].apply(lambda x: ' '.join(x))
+    
+    return ngram_df
+
+

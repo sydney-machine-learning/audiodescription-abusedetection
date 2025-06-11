@@ -7,7 +7,7 @@ import utils
 import data_extraction as da
 
 from pydub import AudioSegment
-from silero_vad import load_silero_vad, read_audio, get_speech_timestamps
+import silero_vad
 
 from pyannote.audio import Pipeline, Inference
 from pyannote.core import Segment
@@ -17,45 +17,38 @@ import whisper
 
 from scipy.spatial.distance import cdist
 
+from speechbrain.inference.speaker import SpeakerRecognition
+import torch
+import torchaudio
+
 import difflib
 from termcolor import colored
 
 from typing import Dict
 
 
-def apply_silero_vad_to_wav(mp3_filename: str, wav_filepath: str, vat_out_fp: str, silero_threshold: float, credits_df: pd.DataFrame):
+def apply_silero_vad_to_wav(mp3_filename: str, wav_filepath: str, vat_out_fp: str, silero_threshold: float, credits_df: pd.DataFrame = None):
     movie_name = utils.remove_ext(mp3_filename)
 
     logging.info(f'Applying Silero VAD to {movie_name}')
-    silero_model = load_silero_vad()
+    silero_model = silero_vad.load_silero_vad()
 
-    full_silero_audio = read_audio(os.path.join(da.trans_mp3_dir, mp3_filename))
+    full_silero_audio = silero_vad.read_audio(os.path.join(da.trans_mp3_dir, mp3_filename))
 
-    if movie_name in credits_df.movie.values:
+    if credits_df is not None and movie_name in credits_df.movie.values:
         credits_ts = credits_df[credits_df.movie.eq(movie_name)]['credits_start_sec'].iloc[0]
         full_silero_audio = full_silero_audio[:int(credits_ts*da.sample_rate)]
 
-    speech_timestamps = get_speech_timestamps(full_silero_audio, silero_model, threshold=silero_threshold, speech_pad_ms=200)
+    speech_timestamps = silero_vad.get_speech_timestamps(full_silero_audio, silero_model, threshold=silero_threshold, speech_pad_ms=200)
     vad_df = pd.DataFrame(speech_timestamps).rename(columns={'start': 'start_frames', 'end': 'end_frames'})
     vad_df[['start', 'end']] = vad_df[['start_frames', 'end_frames']] / da.sample_rate
     vad_df.to_parquet(vat_out_fp)
 
+    # Now cut audio down to just dialogue
+    logging.info(f'Slicing up audio from {movie_name} to speech only')
+    silero_vad.save_audio(wav_filepath, silero_vad.collect_chunks(speech_timestamps, full_silero_audio), sampling_rate=da.sample_rate) 
     utils.cleanup_model(silero_model)
     del full_silero_audio
-
-    # Now cut audio down to just dialogue
-    logging.info(f'Slicing up Audio from {movie_name} to speech only')
-    full_audio = AudioSegment.from_mp3(os.path.join(da.trans_mp3_dir, mp3_filename))
-    dialogue_only_audio = AudioSegment.empty()
-
-    if movie_name in credits_df.movie.values:
-        full_audio = full_audio[:int(credits_ts*1000)]
-
-    for start, end in zip(vad_df['start'].values, vad_df['end'].values):
-        dialogue_only_audio += full_audio[start * 1000: end * 1000]
-        
-    dialogue_only_audio.export(wav_filepath, format="wav")
-    del full_audio, dialogue_only_audio
     
     
 def apply_diarization(movie_name: str, wav_filepath: str, pyannote_model: str, seg_df_path: str, device):
@@ -80,6 +73,7 @@ def apply_diarization(movie_name: str, wav_filepath: str, pyannote_model: str, s
 
     agg_seg_df['start_frame'] = (da.sample_rate * agg_seg_df['start']).astype(int)
     agg_seg_df['end_frame'] = (da.sample_rate * agg_seg_df['end']).astype(int)
+    agg_seg_df['duration'] = agg_seg_df['end'] - agg_seg_df['start']
 
     agg_seg_df.to_parquet(seg_df_path)
 
@@ -87,46 +81,87 @@ def apply_diarization(movie_name: str, wav_filepath: str, pyannote_model: str, s
     del dz
     
     
-def transcribe_segments(transcript_fp: str, seg_df_path: str, wav_filepath: str, whisper_model: str, whisper_config: Dict, embed_model: str, cosine_sim_lim: float, device):
+def transcribe_segments(transcript_fp: str, seg_df_path: str, wav_filepath: str, whisper_model: str, whisper_config: Dict, narr_cs_limit: float, diag_cs_limit: float, device):
     
     segments_df = pd.read_parquet(seg_df_path)
-    narrator_df = segments_df[~segments_df.is_dialogue].copy().reset_index(drop=True)
+    narrator_true_pos_mask = segments_df.is_dialogue.eq(False) & segments_df.cosine_sim.gt(narr_cs_limit)
+    # narrator_false_neg_mask = segments_df.is_dialogue.eq(True) & segments_df.cosine_sim.gt(diag_cs_limit)
+    narrator_df = segments_df[narrator_true_pos_mask].copy().reset_index(drop=True)
     
     model = whisper.load_model(whisper_model, device=device)
     audio = whisper.load_audio(wav_filepath, sr=da.sample_rate)
     seg_start_arr, seg_end_arr = narrator_df['start_frame'].values, narrator_df['end_frame'].values
 
-    embedding_model = Inference(embed_model, device=device, use_auth_token=utils.get_hf_token())
-    narrator_segment = Segment(segments_df.start.iloc[0], segments_df.end.iloc[0])
-    narrator_embedding = embedding_model.crop(wav_filepath, narrator_segment)
-
     segment_list = []
-    max_end = seg_end_arr[-1] / da.sample_rate - 0.03
-
+    
     for ii in range(len(seg_start_arr)):
         if ii % 50 == 0:
             logging.info(f'Segment: {ii + 1} / {len(seg_start_arr)}')
-            
-        end_ts = min(seg_end_arr[ii] / da.sample_rate, max_end)
-        test_seg = Segment(seg_start_arr[ii] / da.sample_rate, end_ts)
-        test_embedding = embedding_model.crop(wav_filepath, test_seg)
-        sim = 1 - cdist(narrator_embedding.data.mean(axis=0, keepdims=True), test_embedding.data.mean(axis=0, keepdims=True), metric="cosine")
         
         result = {'text': ''}
-        if sim > cosine_sim_lim:
-            segment = audio[seg_start_arr[ii]: seg_end_arr[ii]]
-            raw_transcription = model.transcribe(segment, language='en', **whisper_config)
-        
-            if raw_transcription['language'] == 'en':
-                result = raw_transcription
+        segment = audio[seg_start_arr[ii]: seg_end_arr[ii]]
+        raw_transcription = model.transcribe(segment, language='en', **whisper_config)
+    
+        if raw_transcription['language'] == 'en':
+            result = raw_transcription
                 
         segment_list.append(result)
             
     narrator_df['text'] = [x['text'] for x in segment_list]
     narrator_df.to_parquet(transcript_fp)
-
+    
     utils.cleanup_model(model)
     del audio
+    
+    
+def add_pyannote_cosine_sim(seg_df_path: str, wav_filepath: str, min_seg_sec: float, device):
+    
+    segments_df = pd.read_parquet(seg_df_path)
+    segments_df['cosine_sim'] = 1 - segments_df.is_dialogue.astype(int)
+    
+    embedding_model = Inference('pyannote/embedding', device=device, use_auth_token=utils.get_hf_token())
+    narrator_segment = Segment(segments_df.start.iloc[0], segments_df.end.iloc[0])
+    narrator_embedding = embedding_model.crop(wav_filepath, narrator_segment)
+    
+    # Small offset at end due to tiny file length discrepancies
+    max_end = segments_df['end'].iloc[-1] - 0.03
+
+    for ii in range(1, segments_df.shape[0]):
+        if segments_df['duration'].iloc[ii] > min_seg_sec:
+            end = min(segments_df['end'].iloc[ii], max_end)
+            segments_df['cosine_sim'].iloc[ii] = _calc_pyannote_cosine_sim(narrator_embedding, embedding_model, segments_df['start'].iloc[ii], end, wav_filepath)
+        
+    segments_df.to_parquet(seg_df_path)
+    
+    utils.cleanup_model(embedding_model)
+    
+    
+# def add_speech_brain_cosine_sim():
+        
+#     verifier = SpeakerRecognition.from_hparams(source='speechbrain/spkrec-ecapa-voxceleb')
+#     full_signal, fs = torchaudio.load(wav_filepath)
+#     narrator = full_signal[:, segments_df['start_frame'].iloc[0]: segments_df['end_frame'].iloc[0]]
+    
+#     cosine_sim = _calc_speech_brain_cosine_sim(verifier, narrator, full_signal, seg_start_arr[ii], seg_end_arr[ii])
+        
+#     utils.cleanup_model(verifier)
+            
+        
+    
+def _calc_pyannote_cosine_sim(narrator_embed, embedding_model, start, end, wav_filepath: str):
+    
+    test_seg = Segment(start, end)
+    test_embedding = embedding_model.crop(wav_filepath, test_seg)
+    c_dist = cdist(narrator_embed.data.mean(axis=0, keepdims=True), test_embedding.data.mean(axis=0, keepdims=True), metric="cosine")
+    
+    return 1 - c_dist.item()
+
+
+def _calc_speech_brain_cosine_sim(verifier, narrator, full_signal, start, end):
+    test_seg = full_signal[:, start:end]
+    result = verifier.verify_batch(narrator, test_seg)
+    
+    return result[0].item()
     
     
 # TODO: reference appropriately
