@@ -13,18 +13,38 @@ from collections import Counter
 from typing import List, Callable
 
 import re
+import os
 
-class AudioSegDataset(torch.utils.data.Dataset):
+all_txt_sem_rep_dir = os.path.join('data', 'semantic_representations')
+
+
+def convert_col_to_ordinal(series: pd.Series):
     
-    def __init__(self, encodings):
-        self.encodings = {key: torch.tensor(val) for key, val in encodings.items()}
-        
-    def __getitem__(self, idx):
-        item = {key: val[idx] for key, val in self.encodings.items()}
-        return item
+    low_cat = ['none', 'very mild', 'mild']
+    med_cat = ['moderate']
+    high_cat = ['strong', 'high']
+    
+    new_series = np.select(
+        [series.isin(low_cat), series.isin(med_cat), series.isin(high_cat)],
+        [0, 1, 2],
+        default=-1
+    )
+    
+    return new_series
+
+
+class FilmDataset(torch.utils.data.Dataset):
+    """Dataset for film embeddings and ratings"""
+    
+    def __init__(self, embeddings, ratings):
+        self.embeddings = torch.stack(embeddings) if isinstance(embeddings[0], torch.Tensor) else torch.tensor(embeddings)
+        self.ratings = torch.tensor(ratings, dtype=torch.long)
     
     def __len__(self):
-        return len(next(iter(self.encodings.values())))
+        return len(self.embeddings)
+    
+    def __getitem__(self, idx):
+        return self.embeddings[idx], self.ratings[idx]
     
 
 class FractionalTrainEvalCallback(TrainerCallback):
@@ -126,15 +146,6 @@ def compute_metrics(eval_pred):
         "weighted_score": 0.8 * recall + 0.2 * precision
     }
     
-
-def create_test_train_split(df: pd.DataFrame, tokenized_input, movie_list: List[str], tokenizer):
-    set_mask = df['movie'].isin(movie_list)
-    set_enc = tokenizer([txt for in_set, txt in zip(set_mask, tokenized_input) if in_set], padding=True)
-    set_y = df['has_gore'][set_mask]
-
-    ds = AudioSegDataset(set_enc, set_y)
-    
-    return ds, set_y 
 
 
 def check_trainable_layers(model):

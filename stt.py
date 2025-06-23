@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 import logging
 import os
@@ -13,6 +14,8 @@ from pyannote.core import Segment
 # from pyannote.audio.pipelines.utils.hook import ProgressHook
 
 import whisper
+
+import torchaudio
 
 from scipy.spatial.distance import cdist
 
@@ -37,6 +40,12 @@ def apply_silero_vad_to_wav(mp3_filename: str, wav_filepath: str, vad_out_fp: st
     speech_timestamps = silero_vad.get_speech_timestamps(full_silero_audio, silero_model, threshold=silero_threshold, speech_pad_ms=200)
     vad_df = pd.DataFrame(speech_timestamps).rename(columns={'start': 'start_frames', 'end': 'end_frames'})
     vad_df[['start', 'end']] = vad_df[['start_frames', 'end_frames']] / da.sample_rate
+    
+    # Calculate time removed, so we can re-establish original timing after diarization
+    vad_df['duration'] = (vad_df['end'] - vad_df['start'])
+    vad_df['running_time'] = vad_df['duration'].cumsum().shift(1).fillna(0)
+    vad_df['removed_time'] = vad_df['start'] - vad_df['running_time']
+    
     vad_df.to_parquet(vad_out_fp)
 
     # Now cut audio down to just dialogue
@@ -46,7 +55,7 @@ def apply_silero_vad_to_wav(mp3_filename: str, wav_filepath: str, vad_out_fp: st
     del full_silero_audio
     
     
-def apply_diarization(movie_name: str, wav_filepath: str, pyannote_model: str, seg_df_path: str, device):
+def apply_diarization(movie_name: str, wav_filepath: str, pyannote_model: str, seg_df_path: str, vad_df_path: str, device):
     
     logging.info(f'Started pyannote pipeline for {movie_name}')
     pyannote_pipeline = Pipeline.from_pretrained(pyannote_model, use_auth_token=utils.get_hf_token())
@@ -67,11 +76,25 @@ def apply_diarization(movie_name: str, wav_filepath: str, pyannote_model: str, s
     segments_df['start_frame'] = (da.sample_rate * segments_df['start']).astype(int)
     segments_df['end_frame'] = (da.sample_rate * segments_df['end']).astype(int)
     segments_df['duration'] = segments_df['end'] - segments_df['start']
+    
+    # Use Voice Activity Detection dataframe to restablish correct timing in film (since we filtered out speechless sections)
+    vad_df = pd.read_parquet(vad_df_path)
+    
+    # Iterate through each segment and find it's corresponding segment in the VAD df, then add the time removed before that segment
+    for ii in range(segments_df.shape[0]):
+        seg_start = segments_df['start'].iloc[ii]
+        segments_df.loc[ii, 'uncut_start'] = seg_start + vad_df.removed_time.iloc[vad_df.running_time.gt(seg_start).idxmax() - 1]
+        
+    segments_df['uncut_end'] = segments_df['uncut_start'] + segments_df['duration']
 
     segments_df.to_parquet(seg_df_path)
 
     utils.cleanup_model(pyannote_pipeline)
     del dz
+    
+    
+def clean_text(txt: str) -> str:
+    return txt.removesuffix(' Thank you.').replace('.', '').strip()
     
     
 def transcribe_segments(transcript_fp: str, seg_df_path: str, wav_filepath: str, whisper_model: str, whisper_config: Dict, narr_cs_limit: float, device):
@@ -100,6 +123,7 @@ def transcribe_segments(transcript_fp: str, seg_df_path: str, wav_filepath: str,
         segment_list.append(result)
             
     narrator_df['text'] = [x['text'] for x in segment_list]
+    narrator_df['transcription_start_offset'] = [next((y['start'] for y in x['segments'] if clean_text(y['text']) != ''), 0) for x in segment_list]
     narrator_df.to_parquet(transcript_fp)
     
     utils.cleanup_model(model)
@@ -109,24 +133,28 @@ def transcribe_segments(transcript_fp: str, seg_df_path: str, wav_filepath: str,
 def add_pyannote_cosine_sim(seg_df_path: str, wav_filepath: str, min_seg_sec: float, device):
     
     segments_df = pd.read_parquet(seg_df_path)
-    segments_df['cosine_sim'] = 1 - segments_df.is_dialogue.astype(int)
+    segments_df['cosine_sim'] = 1.0 - segments_df.is_dialogue.astype(int)
     
     agg_seg_df = da.aggregate_segments(segments_df)
     embedding_model = Inference('pyannote/embedding', device=device, use_auth_token=utils.get_hf_token())
     narrator_segment = Segment(agg_seg_df.start.iloc[0], agg_seg_df.end.iloc[0])
     narrator_embedding = embedding_model.crop(wav_filepath, narrator_segment)
     
-    # Small offset at end due to tiny file length discrepancies
-    max_end = segments_df['end'].iloc[-1] - 0.03
+    # Pyannote estimates of segment length can go outside file, so prevent this by changing any segments where it is greater
+    file_info = torchaudio.info(wav_filepath)
+    file_end_time = file_info.num_frames / file_info.sample_rate
+    segments_df.loc[segments_df.end > file_end_time, 'end'] = file_end_time
 
-    for ii in range(1, segments_df.shape[0]):
+    for ii in range(segments_df.shape[0]):
         if segments_df['duration'].iloc[ii] > min_seg_sec:
-            end = min(segments_df['end'].iloc[ii], max_end)
-            segments_df['cosine_sim'].iloc[ii] = _calc_pyannote_cosine_sim(narrator_embedding, embedding_model, segments_df['start'].iloc[ii], end, wav_filepath)
+            start = segments_df['start'].iloc[ii]
+            end = segments_df['end'].iloc[ii]
+            segments_df.loc[ii, 'cosine_sim'] = _calc_pyannote_cosine_sim(narrator_embedding, embedding_model, start, end, wav_filepath)
         
     segments_df.to_parquet(seg_df_path)
     
     utils.cleanup_model(embedding_model)
+    del narrator_segment, narrator_embedding
     
     
 def _calc_pyannote_cosine_sim(narrator_embed, embedding_model, start, end, wav_filepath: str):
