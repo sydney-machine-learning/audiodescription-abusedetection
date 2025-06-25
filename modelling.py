@@ -16,19 +16,37 @@ import re
 import os
 
 all_txt_sem_rep_dir = os.path.join('data', 'semantic_representations')
+all_txt_pickle_prefix = 'rep_list_'
+dialogue_only_pickle_prefix = 'dialogue_only_rep_list_'
 
+pooling_models = [
+    'cardiffnlp/twitter-roberta-large-sensitive-multilabel', # 0
+    'cardiffnlp/twitter-roberta-base-offensive',
+    'cardiffnlp/twitter-roberta-base-sentiment-latest',
+    'GroNLP/hateBERT',
+    'microsoft/deberta-v3-large',
+    'joeddav/distilbert-base-uncased-go-emotions-student', # 5
+    'mrm8488/t5-base-finetuned-imdb-sentiment'
+]
 
-def convert_col_to_ordinal(series: pd.Series):
+def convert_col_to_ordinal(series: pd.Series, compact: bool = True) -> pd.Series:
     
     low_cat = ['none', 'very mild', 'mild']
     med_cat = ['moderate']
     high_cat = ['strong', 'high']
     
-    new_series = np.select(
-        [series.isin(low_cat), series.isin(med_cat), series.isin(high_cat)],
-        [0, 1, 2],
-        default=-1
-    )
+    if compact:
+        new_series = np.select(
+            [series.isin(low_cat), series.isin(med_cat), series.isin(high_cat)],
+            [0, 1, 2],
+            default=-1
+        )
+    else:
+        new_series = np.select(
+            [series.eq(low_cat[0]), series.eq(low_cat[1]), series.eq(low_cat[2]), series.eq(med_cat[0]), series.eq(high_cat[0]), series.eq(high_cat[1])],
+            [0, 1, 2, 3, 4, 5],
+            default=-1
+        )
     
     return new_series
 

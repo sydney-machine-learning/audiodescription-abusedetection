@@ -15,6 +15,7 @@ device = torch.device("cuda")
 from transformers import (
     AutoTokenizer,
     AutoModel,
+    T5EncoderModel,
     DataCollatorWithPadding
 )
 
@@ -26,13 +27,15 @@ import os
 import data_extraction as da
 import modelling as md
 
-model_name = 'cardiffnlp/twitter-roberta-large-sensitive-multilabel' #'cardiffnlp/twitter-roberta-base-sentiment-latest'  #'microsoft/deberta-v3-large', "'cardiffnlp/twitter-roberta-base-sentiment-latest'", 'joeddav/distilbert-base-uncased-go-emotions-student'
+model_name = md.pooling_models[1]
 stride = 128
 batch_size = 32
 enc_max_len = 512 #512 if 'deberta' not in model_name else 1024
 
 
 def get_chunked_encodings(df: pd.DataFrame, stride: int, tokenizer, max_len: int):
+    
+    # TODO: convert to utterance level (compare with chunked)
     
     all_segments = []
     movie_indices = []
@@ -63,6 +66,9 @@ def get_chunked_encodings(df: pd.DataFrame, stride: int, tokenizer, max_len: int
     return all_seg_enc, movie_indices
 
 
+# Concatenation Methods:
+# - BERT Original paper (last 4 layers): "best performing method concatenates the token representations from the top four hidden layers"
+
 def process_with_advanced_optimizations(all_segments, movie_indices, pooling_model, data_collator, device, batch_size=128):
     
     torch.backends.cuda.matmul.allow_tf32 = True
@@ -74,7 +80,6 @@ def process_with_advanced_optimizations(all_segments, movie_indices, pooling_mod
         pin_memory=False,
         shuffle=False
     )
-    
     pooling_model = torch.compile(pooling_model, mode="max-autotune")
     all_embeddings = []
     
@@ -94,9 +99,8 @@ def process_with_advanced_optimizations(all_segments, movie_indices, pooling_mod
     
     # Extract embeddings corresponding to each film, combine and add to list (store on CPU)
     for movie, start_idx, end_idx in movie_indices:
-        movie_embeddings = all_embeddings[start_idx:end_idx]
-        pooled = movie_embeddings.max(dim=0)[0]
-        rep_list.append(pooled.cpu())
+        pooled_layers = all_embeddings[start_idx:end_idx].max(dim=0)[0]
+        rep_list.append(pooled_layers.cpu())
     
     # Cleanup GPU memory and artifacts
     del all_embeddings
@@ -109,10 +113,13 @@ def process_with_advanced_optimizations(all_segments, movie_indices, pooling_mod
 
 
 def main():
+    
+    logging.info(f'Pooling Model: {model_name}')
 
     df = pd.read_parquet(da.cleaned_dataset_fp).sort_values(['movie', 'start_time'])
 
-    pooling_model = AutoModel.from_pretrained(model_name) #output_hidden_states=True
+    modelClass = AutoModel if 't5' not in model_name else T5EncoderModel
+    pooling_model = modelClass.from_pretrained(model_name) #output_hidden_states=True
     pooling_model.to(device)
     pooling_model.eval()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -122,13 +129,12 @@ def main():
     logging.info('Starting extraction of semantic representation with full dataset')
     all_segments, movie_indices = get_chunked_encodings(df, stride, tokenizer, enc_max_len)
     rep_list = process_with_advanced_optimizations(
-        all_segments, movie_indices, pooling_model, data_collator, device, 
-        batch_size=batch_size
+        all_segments, movie_indices, pooling_model, data_collator, device, batch_size
     )
     
     model_name_fp = model_name.replace('/', '_')
     
-    with open(os.path.join(md.all_txt_sem_rep_dir, f'rep_list_{model_name_fp}.pkl'), 'wb') as fileobj:
+    with open(os.path.join(md.all_txt_sem_rep_dir, f'{md.all_txt_pickle_prefix}{model_name_fp}.pkl'), 'wb') as fileobj:
         pickle.dump(rep_list, fileobj)
         
     # Repeat with only dialogue
@@ -136,11 +142,10 @@ def main():
     df = df[df.type.eq('dialogue')].reset_index(drop=True)
     all_segments, movie_indices = get_chunked_encodings(df, stride, tokenizer, enc_max_len)
     rep_list = process_with_advanced_optimizations(
-        all_segments, movie_indices, pooling_model, data_collator, device, 
-        batch_size=batch_size
+        all_segments, movie_indices, pooling_model, data_collator, device, batch_size
     )
     
-    with open(os.path.join(md.all_txt_sem_rep_dir,f'dialogue_only_rep_list_{model_name_fp}.pkl'), 'wb') as fileobj:
+    with open(os.path.join(md.all_txt_sem_rep_dir, f'{md.dialogue_only_pickle_prefix}{model_name_fp}.pkl'), 'wb') as fileobj:
         pickle.dump(rep_list, fileobj)
     
 if __name__ == "__main__":

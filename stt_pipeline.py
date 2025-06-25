@@ -49,9 +49,6 @@ mp3_files = da.get_sorted_mp3_list()
 
 for ii, mp3_filename in enumerate(mp3_files):
     
-    if mp3_filename == 'Drive My Car.mp3':
-        continue
-    
     movie_name = utils.remove_ext(mp3_filename)
     
     vad_df_path = os.path.join(da.voice_activity_dir, f'{movie_name}-vad.parquet')
