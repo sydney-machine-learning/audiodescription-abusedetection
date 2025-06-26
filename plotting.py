@@ -9,6 +9,9 @@ os.makedirs(output_dir, exist_ok=True)
 
 sns.set_style("whitegrid")
 
+acb_palette = ['#fff100', '#00adee', '#ED1C24']
+full_acb_palette = ['#afafaf', '#0db14b', '#fff100', '#00adee', '#ED1C24', '#000000']
+
 
 def plot_ngrams(ngram_df: pd.DataFrame, title: str, output_path: str):
     plt.figure(figsize=(10, 8))

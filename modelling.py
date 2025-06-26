@@ -19,14 +19,21 @@ all_txt_sem_rep_dir = os.path.join('data', 'semantic_representations')
 all_txt_pickle_prefix = 'rep_list_'
 dialogue_only_pickle_prefix = 'dialogue_only_rep_list_'
 
+cat_cols = ['themes', 'violence', 'drug_use', 'sex']
+full_cat_cols = ['themes', 'violence', 'language', 'drug_use', 'sex', 'nudity']
+
+# TODO: Fix OOM issue with SBert implementation
 pooling_models = [
     'cardiffnlp/twitter-roberta-large-sensitive-multilabel', # 0
     'cardiffnlp/twitter-roberta-base-offensive',
     'cardiffnlp/twitter-roberta-base-sentiment-latest',
-    'GroNLP/hateBERT',
-    'microsoft/deberta-v3-large',
-    'joeddav/distilbert-base-uncased-go-emotions-student', # 5
+    # 'FacebookAI/roberta-large',
+    # 'nickmuchi/setfit-finetuned-movie-genre-prediction',
+    # 'GroNLP/hateBERT',
+    # 'microsoft/deberta-v3-large',
+    'joeddav/distilbert-base-uncased-go-emotions-student', 
     'mrm8488/t5-base-finetuned-imdb-sentiment'
+    # 'sentence-transformers/all-MiniLM-L6-v2'  # 5
 ]
 
 def convert_col_to_ordinal(series: pd.Series, compact: bool = True) -> pd.Series:
@@ -49,6 +56,12 @@ def convert_col_to_ordinal(series: pd.Series, compact: bool = True) -> pd.Series
         )
     
     return new_series
+
+
+class PlaceHolderDataset(torch.utils.data.Dataset):
+    def __init__(self, data): self.data = data
+    def __len__(self): return len(self.data)
+    def __getitem__(self, ii): return self.data[ii]
 
 
 class FilmDataset(torch.utils.data.Dataset):
