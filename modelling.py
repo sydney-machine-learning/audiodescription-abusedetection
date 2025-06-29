@@ -15,9 +15,8 @@ from typing import List, Callable
 import re
 import os
 
-all_txt_sem_rep_dir = os.path.join('data', 'semantic_representations')
-all_txt_pickle_prefix = 'rep_list_'
-dialogue_only_pickle_prefix = 'dialogue_only_rep_list_'
+sem_rep_dir = os.path.join('data', 'semantic_representations')
+sem_rep_filename = '{movie}_{model}_{rep_type}_{packing_type}_{pooling_strat}.pkl'
 
 cat_cols = ['themes', 'violence', 'drug_use', 'sex']
 full_cat_cols = ['themes', 'violence', 'language', 'drug_use', 'sex', 'nudity']

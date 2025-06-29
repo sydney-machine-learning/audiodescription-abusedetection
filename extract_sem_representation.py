@@ -76,7 +76,7 @@ def _agg_narrator_seg(df: pd.DataFrame):
 
     for row in df.iloc[1:].to_dict(orient="records"):
         
-        if prev_row['type'] == 'narrator' and row['type'] == 'narrator':
+        if prev_row['type'] == 'narrator' and row['type'] == 'narrator' and prev_row['movie'] == row['movie']:
             prev_row['end_time'] = row['end_time']
             prev_row['text'] += (' ' + row['text'])
             
@@ -122,14 +122,6 @@ def get_utterance_encodings(df: pd.DataFrame, tokenizer, max_len: int, label_spe
         overall_idx = len(all_segments)
 
     return all_segments, movie_indices
-
-# Taken from Sentence Transformer documentation: https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2
-# Adapted for max pooling
-def max_pooling(model_output, attention_mask):
-    token_embeddings = model_output[0] # First element of model_output contains all token embeddings
-    input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-    token_embeddings[input_mask_expanded == 0] = -1e9
-    return torch.max(token_embeddings, dim=1).values 
 
 
 def process_with_advanced_optimizations(all_segments, movie_indices, pooling_model, data_collator, device, batch_size=128):
@@ -210,7 +202,7 @@ def build_sem_rep_for_single_model(model_name: str, stride: int, batch_size: int
     pooling_model.to(device)
     pooling_model.eval()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    data_collator = DataCollatorWithPadding(tokenizer=tokenizer, return_tensors="pt") #, pad_to_multiple_of=32)
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer, return_tensors="pt", pad_to_multiple_of=16)
     
     # With transcriptions
     logging.info('Starting extraction of semantic representation with full dataset')
