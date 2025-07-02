@@ -20,9 +20,9 @@ import psutil
 import warnings
 warnings.filterwarnings("ignore")
 
-logging.getLogger("speechbrain").setLevel(logging.WARNING)
 logging.getLogger("pyannote").setLevel(logging.WARNING)
 logging.getLogger("pytorch").setLevel(logging.WARNING)
+warnings.filterwarnings("ignore", module="pytorch_lightning")
 
 # CONFIG PARAMS
 use_vad = True

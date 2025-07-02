@@ -6,6 +6,8 @@ import logging
 import re
 from typing import List, Tuple
 
+from bs4 import BeautifulSoup
+
 from transformers import (
     AutoTokenizer
 )
@@ -13,6 +15,7 @@ from transformers import (
 import kaggle
 from nltk import download
 download('stopwords')
+download('punkt_tab')
 
 import utils
 
@@ -55,20 +58,24 @@ def get_transcript_list():
     return [x for x in os.listdir(transcription_dir) if x.endswith(transcript_df_fp.format(movie_name=''))]
 
 
-def get_sorted_mp3_list():
+def get_sorted_mp3_list(rerun_all: bool = False):
     
     # First identify movies with no transcripts, these should be done first
     mp3_files = [x for x in os.listdir(trans_mp3_dir) if os.path.splitext(x)[-1].lower() == '.mp3']
     all_movies = [utils.remove_ext(x) for x in mp3_files]
     transcripts = [x.removesuffix(transcript_df_fp.format(movie_name='')) for x in get_transcript_list()]
     filtered_transcripts = [x for x in transcripts if x in all_movies]
-    missing_movies = [x + '.mp3' for x in set(all_movies).difference(set(transcripts))]
-    
-    # Next sort all the transcriptions by last modified time
-    file_times = [(movie + '.mp3', os.stat(os.path.join(transcription_dir, transcript_df_fp.format(movie_name=movie))).st_mtime) for movie in filtered_transcripts]
-    remaining_mp3s = [x for x, _ in sorted(file_times, key=lambda x: x[1])]
 
-    return missing_movies + remaining_mp3s
+    # Add all missing transcripts to outputlist
+    output_list = [x + '.mp3' for x in set(all_movies).difference(set(transcripts))]
+    
+    if rerun_all:
+        # Next sort all the transcriptions by last modified time and add them
+        file_times = [(movie + '.mp3', os.stat(os.path.join(transcription_dir, transcript_df_fp.format(movie_name=movie))).st_mtime) for movie in filtered_transcripts]
+        remaining_mp3s = [x for x, _ in sorted(file_times, key=lambda x: x[1])]
+        output_list += remaining_mp3s
+
+    return output_list
 
 
 def get_or_create_subtitles_data(parquet_path: str, download_dir: str):
@@ -107,6 +114,12 @@ def get_or_create_subtitles_data(parquet_path: str, download_dir: str):
         movie_list_df.to_parquet(parquet_path)
 
     return movie_list_df
+
+
+def remove_html(text):
+    if pd.isna(text):
+        return text
+    return BeautifulSoup(text, 'html.parser').get_text(separator=' ')
 
 
 def get_credits_timestamps():

@@ -7,5 +7,9 @@ results/*
 models/*
 
 *.png
+*.csv
+*.prof
 
 graveyard.py
+dummy.py
+manual_transcript_standardisation.ipynb
