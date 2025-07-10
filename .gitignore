@@ -13,3 +13,6 @@ models/*
 graveyard.py
 dummy.py
 manual_transcript_standardisation.ipynb
+
+*.code-workspace
+*.ckpt

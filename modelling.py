@@ -19,8 +19,10 @@ sem_rep_dir = os.path.join('data', 'semantic_representations')
 sem_rep_filename = '{movie}_{model}_{rep_type}_{packing_type}_{pooling_strat}.pkl'
 
 cat_cols = ['themes', 'violence', 'drug_use', 'sex']
-full_cat_cols = ['themes', 'violence', 'language', 'drug_use', 'sex', 'nudity']
+full_cat_cols = ['themes', 'violence', 'language', 'drug_use', 'nudity', 'sex']
+classifications = ['G', 'PG', 'M', 'MA 15+', 'R 18+']
 
+# TODO: create dict of models with actual properties
 pooling_models = [
     'cardiffnlp/twitter-roberta-large-sensitive-multilabel', # 0
     'cardiffnlp/twitter-roberta-base-offensive',
@@ -31,25 +33,31 @@ pooling_models = [
     # 'microsoft/deberta-v3-large',
     'joeddav/distilbert-base-uncased-go-emotions-student', 
     'mrm8488/t5-base-finetuned-imdb-sentiment',
-    'NemoraAi/modernbert-chat-moderation-X-V2',
+    # 'NemoraAi/modernbert-chat-moderation-X-V2',
     'sentence-transformers/all-MiniLM-L6-v2'  # 5
 ]
 
+rep_types = ['dialogue', 'narration', 'transcript']
+packing_types = ['chunks', 'utterances']
+pooling_strategies = ['lhs2CLS', 'lhs1CLS'] #lhs2CLS_fp32
+
+
 def convert_col_to_ordinal(series: pd.Series, compact: bool = True) -> pd.Series:
     
-    low_cat = ['none', 'very mild', 'mild']
+    low_cat = ['none', 'very mild']
+    low_med_cat = ['mild']
     med_cat = ['moderate']
     high_cat = ['strong', 'high']
     
     if compact:
         new_series = np.select(
-            [series.isin(low_cat), series.isin(med_cat), series.isin(high_cat)],
-            [0, 1, 2],
+            [series.isin(low_cat), series.isin(low_med_cat), series.isin(med_cat), series.isin(high_cat)],
+            [0, 1, 2, 3],
             default=-1
         )
     else:
         new_series = np.select(
-            [series.eq(low_cat[0]), series.eq(low_cat[1]), series.eq(low_cat[2]), series.eq(med_cat[0]), series.eq(high_cat[0]), series.eq(high_cat[1])],
+            [series.eq(low_cat[0]), series.eq(low_cat[1]), series.eq(low_med_cat[0]), series.eq(med_cat[0]), series.eq(high_cat[0]), series.eq(high_cat[1])],
             [0, 1, 2, 3, 4, 5],
             default=-1
         )

@@ -3,6 +3,7 @@ import numpy as np
 
 import logging
 import os
+import re
 
 import utils
 import data_extraction as da
@@ -18,6 +19,8 @@ import whisper
 import torchaudio
 
 from scipy.spatial.distance import cdist
+
+from evaluate import load
 
 import difflib
 from termcolor import colored
@@ -68,14 +71,17 @@ def apply_diarization(movie_name: str, wav_filepath: str, pyannote_model: str, s
     records = [(x[0].start, x[0].end, int(x[2].split('_')[-1])) for x in dz.itertracks(yield_label = True)]
     segments_df = pd.DataFrame(records, columns=['start', 'end', 'speaker'])
 
-    # Assume narrator speaks first (describing opening logos etc)
-    narrator_id = segments_df['speaker'].iloc[0]
-    segments_df['is_dialogue'] = segments_df['speaker'].ne(narrator_id)
-    segments_df['movie_name'] = movie_name
-
     segments_df['start_frame'] = (da.sample_rate * segments_df['start']).astype(int)
     segments_df['end_frame'] = (da.sample_rate * segments_df['end']).astype(int)
     segments_df['duration'] = segments_df['end'] - segments_df['start']
+
+    # Check duration of first speaker
+    first_speaker_dur = segments_df[segments_df.speaker.eq(segments_df.speaker.iloc[0])].duration.sum()
+    # Assume narrator speaks first (describing opening logos etc), but if duration is quite low, check second speaker
+    narrator_id = segments_df['speaker'].iloc[0] if first_speaker_dur > 500 else segments_df.speaker.unique()[1]
+
+    segments_df['is_dialogue'] = segments_df['speaker'].ne(narrator_id)
+    segments_df['movie_name'] = movie_name
     
     # Use Voice Activity Detection dataframe to restablish correct timing in film (since we filtered out speechless sections)
     vad_df = pd.read_parquet(vad_df_path)
@@ -97,10 +103,10 @@ def clean_text(txt: str) -> str:
     return txt.removesuffix(' Thank you.').replace('.', '').strip()
     
     
-def transcribe_segments(transcript_fp: str, seg_df_path: str, wav_filepath: str, whisper_model: str, whisper_config: Dict, narr_cs_limit: float, device):
+def transcribe_segments(transcript_fp: str, seg_df_path: str, wav_filepath: str, whisper_model: str, whisper_config: Dict, narr_cs_limit: float, device, convert_dialogue=False):
     
     segments_df = pd.read_parquet(seg_df_path)
-    narrator_true_pos_mask = segments_df.is_dialogue.eq(False) & segments_df.cosine_sim.gt(narr_cs_limit)
+    narrator_true_pos_mask = segments_df.is_dialogue.eq(convert_dialogue) & segments_df.cosine_sim.gt(narr_cs_limit)
     narrator_df = segments_df[narrator_true_pos_mask].copy().reset_index(drop=True)
     
     model = whisper.load_model(whisper_model, device=device)
@@ -110,6 +116,7 @@ def transcribe_segments(transcript_fp: str, seg_df_path: str, wav_filepath: str,
     segment_list = []
     
     for ii in range(len(seg_start_arr)):
+        # TODO: replace with tdqm
         if ii % 50 == 0:
             logging.info(f'Segment: {ii + 1} / {len(seg_start_arr)}')
         
@@ -128,6 +135,8 @@ def transcribe_segments(transcript_fp: str, seg_df_path: str, wav_filepath: str,
     
     utils.cleanup_model(model)
     del audio
+
+    return narrator_df
     
     
 def add_pyannote_cosine_sim(seg_df_path: str, wav_filepath: str, min_seg_sec: float, device):
@@ -136,6 +145,7 @@ def add_pyannote_cosine_sim(seg_df_path: str, wav_filepath: str, min_seg_sec: fl
     segments_df['cosine_sim'] = 1.0 - segments_df.is_dialogue.astype(int)
     
     agg_seg_df = da.aggregate_segments(segments_df)
+    agg_seg_df = agg_seg_df[agg_seg_df.is_dialogue.eq(False)]
     embedding_model = Inference('pyannote/embedding', device=device, use_auth_token=utils.get_hf_token())
     narrator_segment = Segment(agg_seg_df.start.iloc[0], agg_seg_df.end.iloc[0])
     narrator_embedding = embedding_model.crop(wav_filepath, narrator_segment)
@@ -165,7 +175,24 @@ def _calc_pyannote_cosine_sim(narrator_embed, embedding_model, start, end, wav_f
     
     return 1 - c_dist.item()
     
+
+def calc_wer(movie_name: str):
+
+    with open(os.path.join(da.transcription_dir, 'manual', f'{movie_name}.txt')) as fileobj:
+        raw_txt = fileobj.read()
+    ref_txt = re.sub('[\.,"\?!:]', '', raw_txt).lower().replace('-', ' ').replace('\n', ' ')
+
+    trans_df = pd.read_parquet(os.path.join(da.transcription_dir, da.transcript_df_fp.format(movie_name=movie_name)))
+    trans_df = trans_df[trans_df['text'].ne(' Thank you.')]
+    trans_txt = ''.join(trans_df.text.str.replace('[\.,"\?!]', '', regex=True)).lower().replace('-', ' ')
     
+    wer, cer = load('wer'), load('cer')
+    wer_score = wer.compute(predictions=[trans_txt], references=[ref_txt])
+    cer_score = cer.compute(predictions=[trans_txt], references=[ref_txt])
+
+    return wer_score, cer_score      
+
+
 # TODO: reference appropriately
 def visualise_wer_differences(candidate_txt: str, reference_txt: str):
     ref_words = reference_txt.split()

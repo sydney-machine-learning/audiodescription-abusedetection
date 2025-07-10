@@ -23,8 +23,8 @@ Dune: Part Two,https://www.classification.gov.au/titles/dune-part-two,moderate,m
 Elemental,https://www.classification.gov.au/titles/elemental-8,mild,none,mild,none,none,very mild,"Mild themes and occasional coarse language, some scenes may scare young children"
 Elvis,https://www.classification.gov.au/titles/elvis-5,moderate,mild,moderate,mild,none,mild,Mature themes and coarse language
 Everything Everywhere All At Once,https://www.classification.gov.au/titles/everything-everywhere-all-once,strong,strong,moderate,mild,none,strong,Strong violence and crude sexual humour
-A Star is Born (2019),https://www.classification.gov.au/titles/star-born,moderate,mild,moderate,moderate,moderate,moderate,"Mature themes, coarse language, drug use and sex scenes"
-Aladdin (2019),https://www.classification.gov.au/titles/aladdin,mild,mild,none,none,none,none,Mild fantasy themes
+A Star is Born,https://www.classification.gov.au/titles/star-born,moderate,mild,moderate,moderate,moderate,moderate,"Mature themes, coarse language, drug use and sex scenes"
+Aladdin,https://www.classification.gov.au/titles/aladdin,mild,mild,none,none,none,none,Mild fantasy themes
 Aquaman,https://www.classification.gov.au/titles/aquaman,moderate,moderate,mild,none,none,none,Fantasy violence
 Avengers Endgame,https://www.classification.gov.au/titles/avengers-endgame,mild,moderate,mild,none,none,none,Violence
 Black Panther,https://www.classification.gov.au/titles/black-panther-5,moderate,moderate,mild,none,none,none,Action violence
@@ -53,7 +53,6 @@ Little Women,https://www.classification.gov.au/titles/little-women-7,very mild,v
 Maestro,https://www.classification.gov.au/titles/maestro-4,mild,very mild,moderate,moderate,none,mild,"Coarse language and drug use"
 Mank,https://www.classification.gov.au/titles/mank,moderate,very mild,moderate,none,none,mild,Mature themes and coarse language
 Marriage Story,https://www.classification.gov.au/titles/marriage-story,moderate,none,moderate,mild,none,moderate,"Mature themes, coarse language and sexual references"
-Minari,https://www.classification.gov.au/titles/minari,moderate,very mild,moderate,none,none,none,Mild themes and coarse language
 Minions The Rise of Gru,https://www.classification.gov.au/titles/minions-rise-gru,moderate,moderate,none,none,very mild,none,Mild themes and animated violence
 Mission Impossible - Dead Reckoning Part One,https://www.classification.gov.au/titles/mission-impossible-dead-reckoning-part-one,moderate,moderate,mild,none,none,very mild,Action violence
 Nightmare Alley,https://www.classification.gov.au/titles/nightmare-alley,strong,strong,moderate,mild,very mild,moderate,Strong violence and injury detail
@@ -86,8 +85,8 @@ The Father,https://www.classification.gov.au/titles/father-2,moderate,mild,moder
 The Favourite,https://www.classification.gov.au/titles/favourite,moderate,mild,strong,none,moderate,moderate,Strong coarse language
 The Holdovers,https://www.classification.gov.au/titles/holdovers,moderate,mild,moderate,mild,mild,mild,Mature themes and coarse language
 The Irishman,https://www.classification.gov.au/titles/irishman-2,moderate,strong,strong,moderate,none,none,Strong violence and coarse language
-The Lion King (2019),https://www.classification.gov.au/titles/lion-king-2019,mild,mild,none,none,none,none,Mild themes and violence
-The Little Mermaid (2023),https://www.classification.gov.au/titles/little-mermaid-13,mild,mild,none,none,none,none,"Mild fantasy themes and violence, some scenes may scare young children"
+The Lion King,https://www.classification.gov.au/titles/lion-king-2019,mild,mild,none,none,none,none,Mild themes and violence
+The Little Mermaid,https://www.classification.gov.au/titles/little-mermaid-13,mild,mild,none,none,none,none,"Mild fantasy themes and violence, some scenes may scare young children"
 The Power of the Dog,https://www.classification.gov.au/titles/power-dog,moderate,mild,mild,none,mild,mild,Mature themes
 The Silence of the Lambs,https://www.classification.gov.au/titles/silence-lambs-said-be-special-edition,,,,,,,"High level violence, Medium level coarse language"
 The Super Mario Bros. Movie,https://www.classification.gov.au/titles/super-mario-bros-movie,moderate,moderate,none,none,none,none,"Mild fantasy themes and animated violence, some scenes may scare young children"
@@ -172,7 +171,7 @@ Fantastic Beasts And Where To Find Them,https://www.classification.gov.au/titles
 Finding Dory,https://www.classification.gov.au/titles/finding-dory,very mild,none,very mild,none,none,none,Some scenes may scare young children
 Rogue One A Star Wars Story,https://www.classification.gov.au/titles/rogue-one,mild,moderate,very mild,none,none,none,Science fiction violence
 Suicide Squad,https://www.classification.gov.au/titles/suicide-squad,moderate,moderate,moderate,none,none,mild,"Fantasy themes, violence and coarse language"
-The Jungle Book (2016),https://www.classification.gov.au/titles/jungle-book-16,mild,mild,very mild,none,none,none,"Mild threat and violence, some scenes may scare young children"
+The Jungle Book,https://www.classification.gov.au/titles/jungle-book-16,mild,mild,very mild,none,none,none,"Mild threat and violence, some scenes may scare young children"
 The Secret Life Of Pets,https://www.classification.gov.au/titles/secret-life-pets,very mild,very mild,none,none,very mild,none,Very mild sense of threat and some crude humour
 Zootopia,https://www.classification.gov.au/titles/zootopia,mild,mild,very mild,none,none,none,"Mild themes and threat, some scenes may scare young children"
 Bridge of Spies,https://www.classification.gov.au/titles/bridge-spies,moderate,moderate,moderate,none,none,none,"Mature themes, violence and coarse language"
@@ -331,3 +330,143 @@ Frankenweenie,https://www.classification.gov.au/titles/frankenweenie,mild,none,m
 Goosebumps,https://www.classification.gov.au/titles/goosebumps,mild,mild,none,none,none,none,Mild scary scenes
 He Named Me Malala,https://www.classification.gov.au/titles/he-named-me-malala-0,mild,mild,none,none,none,none,"Mild themes, some distressing images"
 Grace of Monaco,https://www.classification.gov.au/titles/grace-monaco,mild,mild,mild,none,very mild,mild,"Mild themes, sexual reference and infrequent coarse language"
+The Dead Lands,https://www.classification.gov.au/titles/dead-lands,strong,strong,mild,mild,very mild,moderate,Strong themes and violence
+The Adventures of Sharkboy and Lavagirl,https://www.classification.gov.au/titles/adventures-sharkboy-and-lavagirl-3-d-1,,,,,,,The content is very mild in impact
+Earth to Echo,https://www.classification.gov.au/titles/earth-echo,mild,very mild,none,none,none,none,Mild themes and coarse language
+Hick,https://www.classification.gov.au/titles/hick,strong,moderate,moderate,strong,none,mild,"Strong themes, drug use and violence"
+Horns,https://www.classification.gov.au/titles/horns,strong,high,strong,strong,strong,strong,"High impact violence, blood and gore"
+Spike Island,https://www.classification.gov.au/titles/spike-island,moderate,moderate,strong,strong,none,moderate,"Strong coarse language, drug use and sexual references"
+Spontaneous,https://www.classification.gov.au/titles/spontaneous,strong,mild,moderate,strong,none,moderate,"Strong bloody science fiction themes, drug use and coarse language"
+Austenland,https://www.classification.gov.au/titles/austenland,none,mild,mild,none,none,mild,"Mild sexual references, coarse language and violence"
+Rock Dog,https://www.classification.gov.au/titles/rock-dog,none,very mild,very mild,none,none,none,Very mild animated violence and coarse language
+Whitney Can I Be Me,https://www.classification.gov.au/titles/whitney-can-i-be-me,moderate,very mild,moderate,moderate,none,moderate,Mature themes and coarse language
+The Perks of Being a Wallflower,https://www.classification.gov.au/titles/perks-being-wallflower,moderate,very mild,moderate,moderate,none,moderate,"Mature themes, drug use, sexual references and coarse language"
+Army of One,https://www.classification.gov.au/titles/army-one,mild,mild,moderate,moderate,none,mild,Coarse language and drug use
+The Meddler,https://www.classification.gov.au/titles/meddler,mild,very mild,moderate,moderate,none,mild,Drug references and infrequent coarse language
+Table 19,https://www.classification.gov.au/titles/table-19,mild,none,mild,moderate,mild,mild,Drug use
+Spoiler Alert,https://www.classification.gov.au/titles/spoiler-alert-3,mild,none,mild,moderate,mild,moderate,Sex and drug use
+LOL,https://www.classification.gov.au/titles/lol,mild,mild,mild,moderate,very mild,moderate,Sexual references and drug use
+Foxcatcher,https://www.classification.gov.au/titles/foxcatcher,mild,moderate,mild,moderate,very mild,moderate,Drug use and violence
+Don't Think Twice,https://www.classification.gov.au/titles/dont-think-twice,mild,mild,moderate,moderate,mild,mild,Coarse language and drug use
+Brigsby Bear,https://www.classification.gov.au/titles/brigsby-bear,mild,very mild,mild,moderate,none,moderate,Sex scenes and drug use
+Jesus Revolution,https://www.classification.gov.au/titles/jesus-revolution,moderate,none,none,moderate,none,none,Mature themes and drug references
+Locked Down,https://www.classification.gov.au/titles/locked-down-0,mild,none,moderate,moderate,very mild,mild,Coarse language and drug references
+I'll See You in My Dreams,https://www.classification.gov.au/titles/ill-see-you-my-dreams,mild,none,moderate,moderate,none,mild,Drug use and infrequent coarse language
+T2 Trainspotting,https://www.classification.gov.au/titles/t2-trainspotting,high,strong,strong,strong,strong,strong,"High impact themes, coarse language and drug use"
+Zola,https://www.classification.gov.au/titles/zola,strong,strong,strong,mild,strong,strong,"Strong themes, sex, nudity, sexual violence and coarse language"
+Zone 414,https://www.classification.gov.au/titles/zone-414,strong,strong,moderate,moderate,moderate,moderate,Strong themes and violence
+Zombies 2,https://www.classification.gov.au/titles/zombies-2-1,mild,very mild,none,none,none,none,Mild themes
+A Minecraft Movie,https://www.classification.gov.au/titles/minecraft-movie,mild,mild,mild,none,none,none,"Mild fantasy violence and coarse language, some scenes may scare young children"
+A Monster Calls,https://www.classification.gov.au/titles/monster-calls,mild,mild,mild,none,none,none,"Mild themes and violence, some scenes may scare children"
+A Street Cat Named Bob,https://www.classification.gov.au/titles/street-cat-named-bob,mild,very mild,mild,mild,none,none,Mild themes of drug addiction and coarse languagae
+A Tourist's Guide to Love,https://www.classification.gov.au/titles/tourists-guide-love,very mild,none,very mild,none,none,none,"Themes, very mild coarse language"
+A United Kingdom,https://www.classification.gov.au/titles/united-kingdom,mild,mild,mild,none,none,very mild,"Mild themes, violence and coarse language"
+Churchill's Secret,https://www.classification.gov.au/titles/churchills-secret,mild,none,mild,none,none,none,Mild themes and coarse language
+The Last Screenwriter,n/a,,,,,,,
+Conclave,https://www.classification.gov.au/titles/conclave,mild,mild,none,none,none,none,Mild themes
+Listen,https://www.classification.gov.au/titles/listen-5,mild,mild,moderate,none,moderate,moderate,"Coarse language, nudity, sex scenes"
+Legends of the Hidden Temple,n/a,,,,,,,
+Cop and a Half - New Recruit,https://www.classification.gov.au/titles/cop-and-half-new-recruit,mild,mild,none,none,none,none,Mild themes and violence
+Cruella,https://www.classification.gov.au/titles/cruella,mild,mild,very mild,none,very mild,none,"Mild themes, violence and sense of threat"
+Dad's Army,https://www.classification.gov.au/titles/dads-army,mild,mild,very mild,none,mild,very mild,"Mild themes, violence and nudity"
+The Confirmation,https://www.classification.gov.au/titles/confirmation,mild,mild,mild,mild,none,none,"Mild themes, coarse language and violence"
+Darling Companion,https://www.classification.gov.au/titles/darling-companion,very mild,very mild,mild,none,none,mild,Mild coarse language and sexual references
+Dater's Handbook,https://www.classification.gov.au/titles/daters-handbook,very mild,none,none,none,none,none,Very mild themes
+DC League of Super-Pets,https://www.classification.gov.au/titles/dc-league-superpets,mild,mild,mild,none,none,none,Mild animated fantasy violence and coarse language
+Descendants 3,https://www.classification.gov.au/titles/descendants-3,mild,mild,very mild,none,none,none,Mild fantasy themes and violence
+Dog Man,https://www.classification.gov.au/titles/dog-man-0,very mild,very mild,very mild,none,none,none,"Very mild themes, animated violence and coarse language"
+East Side Sushi,https://www.classification.gov.au/titles/east-side-sushi,very mild,mild,very mild,none,none,none,Mild violence
+Echo in the Canyon,https://www.classification.gov.au/titles/echo-canyon,very mild,none,mild,mild,none,very mild,Mild coarse language and drug references
+Enchanted Kingdom,https://www.classification.gov.au/titles/enchanted-kingdom,none,none,none,none,none,none,General
+Emma's Chance,https://www.classification.gov.au/titles/emmas-chance,very mild,none,none,none,none,none,Very mild themes
+Ferdinand,https://www.classification.gov.au/titles/ferdinand,very mild,very mild,very mild,none,none,none,Very mild themes and coarse language
+Blair Witch,https://www.classification.gov.au/titles/blair-witch-0,strong,moderate,moderate,mild,none,mild,Strong supernatural themes
+Clemency,https://www.classification.gov.au/titles/clemency,strong,none,moderate,none,none,very mild,Strong themes
+Disappearance at Clifton Hill,https://www.classification.gov.au/titles/disappearance-clifton-hill,strong,moderate,moderate,none,none,mild,Strong themes
+Disconnect,https://www.classification.gov.au/titles/disconnect,strong,moderate,moderate,moderate,moderate,moderate,Strong themes
+Ferrari,https://www.classification.gov.au/titles/ferrari-3,strong,mild,moderate,none,mild,moderate,Strong injury detail
+Flag Day,https://www.classification.gov.au/titles/flag-day,strong,moderate,moderate,moderate,moderate,moderate,Strong themes
+Great White,https://www.classification.gov.au/titles/great-white-0,strong,mild,moderate,none,none,mild,Strong themes
+Greta,https://www.classification.gov.au/titles/greta-0,strong,moderate,mild,mild,none,very mild,Strong injury detail
+Kindred,https://www.classification.gov.au/titles/kindred-1,strong,moderate,moderate,none,none,none,Strong injury detail
+Level 16,https://www.classification.gov.au/titles/level-16,strong,moderate,none,none,none,mild,Strong themes
+Mean Dreams,https://www.classification.gov.au/titles/mean-dreams,strong,moderate,moderate,none,none,none,Strong themes
+Never Let Go,https://www.classification.gov.au/titles/never-let-go-1,strong,moderate,moderate,none,none,none,A strong suicide scene
+Nitram,https://www.classification.gov.au/titles/nitram,strong,moderate,moderate,moderate,mild,very mild,Strong themes
+The White Helmets,https://www.classification.gov.au/titles/white-helmets,moderate,mild,none,none,none,none,Mature themes
+The Seagull,https://www.classification.gov.au/titles/seagull,moderate,very mild,very mild,none,very mild,very mild,Mature themes
+The New Boy,https://www.classification.gov.au/titles/new-boy,moderate,mild,mild,none,none,none,Mature themes
+The Meg,https://www.classification.gov.au/titles/meg,moderate,very mild,mild,none,none,mild,Science fiction action
+The Longest Ride,https://www.classification.gov.au/titles/longest-ride-0,moderate,mild,mild,none,moderate,moderate,Mature themes and sex scenes
+The Glass Castle,https://www.classification.gov.au/titles/glass-castle,moderate,mild,mild,none,none,mild,Mature themes
+The Apparition,https://www.classification.gov.au/titles/apparition,moderate,mild,mild,none,none,none,Supernatural themes and violence
+Tesla,https://www.classification.gov.au/titles/tesla,moderate,none,mild,none,none,none,Mature themes
+Radioactive,https://www.classification.gov.au/titles/radioactive,moderate,very mild,mild,none,mild,mild,Mature themes
+Queen of the Desert,https://www.classification.gov.au/titles/queen-desert,moderate,mild,mild,none,mild,mild,Mature themes
+Gasoline Alley,https://www.classification.gov.au/titles/gasoline-alley,moderate,strong,moderate,moderate,none,moderate,Strong violence and coarse language
+Gringo,https://www.classification.gov.au/titles/gringo-1,moderate,strong,moderate,mild,very mild,moderate,Strong violence
+Gunpowder Milkshake,https://www.classification.gov.au/titles/gunpowder-milkshake,moderate,strong,moderate,none,none,none,Strong action violence
+High Ground,https://www.classification.gov.au/titles/high-ground,moderate,strong,moderate,none,moderate,none,Strong violence
+Higher Power,https://www.classification.gov.au/titles/higher-power,moderate,strong,moderate,mild,very mild,mild,Strong violence
+Hitman Agent 47,https://www.classification.gov.au/titles/hitman-agent-47,moderate,strong,moderate,none,moderate,none,Strong violence
+Hostiles,https://www.classification.gov.au/titles/hostiles,moderate,strong,moderate,none,none,none,Strong violence
+In a Valley of Violence,https://www.classification.gov.au/titles/valley-violence,moderate,strong,moderate,none,none,mild,Strong violence
+Interceptor,https://www.classification.gov.au/titles/interceptor-4,moderate,strong,moderate,none,none,moderate,Strong violence
+Jane Got a Gun,https://www.classification.gov.au/titles/jane-got-gun,moderate,strong,moderate,none,none,mild,Strong violence
+Kicks,https://www.classification.gov.au/titles/kicks-0,moderate,strong,moderate,moderate,none,moderate,Strong violence
+Last Knights,https://www.classification.gov.au/titles/last-knights,moderate,strong,none,none,none,mild,Strong violence
+Lawless,https://www.classification.gov.au/titles/lawless,mild,strong,moderate,none,moderate,mild,Strong bloody violence
+About Last Night,https://www.classification.gov.au/titles/about-last-night,mild,none,moderate,moderate,moderate,strong,Strong sexual references and coarse language
+Animals,https://www.classification.gov.au/titles/animals,moderate,none,moderate,moderate,moderate,strong,Strong sex scenes and drug use
+Chocolate City,https://www.classification.gov.au/titles/chocolate-city,mild,moderate,moderate,none,mild,strong,Strong sexual references
+Disobedience,https://www.classification.gov.au/titles/disobedience,moderate,very mild,moderate,none,moderate,strong,Strong sex scenes
+Electricity,https://www.classification.gov.au/titles/electricity,moderate,moderate,moderate,mild,moderate,strong,Strong sex scene and themes
+Guest House,https://www.classification.gov.au/titles/guest-house-0,strong,moderate,moderate,moderate,moderate,moderate,Strong crude humour
+How to Build a Girl,https://www.classification.gov.au/titles/how-build-girl,moderate,mild,moderate,very mild,mild,strong,Strong sex scenes and sexual references
+Identity Thief,https://www.classification.gov.au/titles/identity-thief,mild,moderate,moderate,none,mild,strong,Strong sexual references and coarse language
+Kids in Love,https://www.classification.gov.au/titles/kids-love,mild,very mild,moderate,none,moderate,strong,Strong sex scene
+Not Suitable for Children,https://www.classification.gov.au/titles/not-suitable-for-children,moderate,very mild,moderate,moderate,moderate,strong,Strong sex scenes
+31,https://www.classification.gov.au/titles/31-2,strong,high,strong,none,strong,strong,High impact bloody violence
+6 Years,https://www.classification.gov.au/titles/6-years,strong,strong,moderate,moderate,high,high,High impact sexual image
+Ambulance,https://www.classification.gov.au/titles/ambulance-5,strong,strong,moderate,mild,none,moderate,Strong violence and surgical scenes
+Friend Request,https://www.classification.gov.au/titles/friend-request-0,strong,strong,moderate,very mild,none,very mild,Strong horror themes and violence
+Free State of Jones,https://www.classification.gov.au/titles/free-state-jones,strong,strong,none,none,none,very mild,Strong themes violence
+Generation Wealth,https://www.classification.gov.au/titles/generation-wealth,strong,none,moderate,moderate,strong,strong,"Strong themes, sex and nudity"
+Hotel Mumbai,https://www.classification.gov.au/titles/hotel-mumbai,strong,strong,moderate,none,very mild,moderate,Storng themes and violence
+Hot Bot,https://www.classification.gov.au/titles/hot-bot,strong,moderate,moderate,none,moderate,strong,Strong crude sexual humour and coarse language
+Jexi,https://www.classification.gov.au/titles/jexi,strong,mild,strong,moderate,strong,strong,"Strong crude sexual humour, coarse language and brief nudity"
+Kinds of Kindness,https://www.classification.gov.au/titles/kinds-kindness,strong,strong,moderate,none,moderate,strong,"Strong themes, violence, sexual violence and sex scenes"
+Last Night in Soho,https://www.classification.gov.au/titles/last-night-soho,strong,strong,strong,moderate,moderate,moderate,"Strong themes, bloody violence and coarse language"
+Target Number One,https://www.classification.gov.au/titles/target-number-one,strong,strong,strong,strong,mild,moderate,"Strong themes, drug use, violence and coarse language"
+Ten Thousand Saints,https://www.classification.gov.au/titles/ten-thousand-saints,strong,mild,moderate,strong,mild,mild,Strong themes and drug use
+The United States Vs Billie Holiday,https://www.classification.gov.au/titles/united-states-vs-billie-holiday,strong,moderate,moderate,strong,moderate,strong,"Strong themes, drug use and sex scenes"
+The Wedding Ringer,https://www.classification.gov.au/titles/wedding-ringer,strong,mild,moderate,strong,moderate,strong,"Strong crude humour, sexual references, drug use and brief nudity"
+Beasts of No Nation,https://audiovault.net/movies?search=beasts+of+no+nation,strong,strong,moderate,moderate,moderate,moderate,Strong themes and bloody violence
+Billy Lynn's Long Halftime Walk,https://www.classification.gov.au/titles/billy-lynns-long-halftime-walk,strong,strong,moderate,moderate,none,moderate,"Strong themes, violence and coarse language"
+Bodies Bodies Bodies,https://www.classification.gov.au/titles/bodies-bodies-bodies,strong,strong,strong,moderate,none,moderate,Strong violence and coarse language
+Byzantium,https://www.classification.gov.au/titles/byzantium,strong,strong,strong,very mild,moderate,moderate,"Strong, supernatural themes, violence and coarse language"
+Capone,https://www.classification.gov.au/titles/capone-0,strong,strong,strong,none,very mild,moderate,"Strong themes, bloody violence and coarse language"
+Chernobyl Diaries,https://www.classification.gov.au/titles/chernobyl-diaries,strong,strong,moderate,none,none,mild,"Horror violence, blood and gore, and coarse language"
+The Frozen Ground,https://www.classification.gov.au/titles/frozen-ground,strong,strong,strong,strong,moderate,moderate,"Strong themes, sexual violence, drug use and coarse language"
+The Hungover Games,https://www.classification.gov.au/titles/hungover-games,strong,moderate,strong,strong,strong,strong,"Strong crude humour, sexual references, nudity, drug use and coarse language"
+A Cure For Wellness,https://www.classification.gov.au/titles/cure-for-wellness,strong,strong,moderate,none,moderate,moderate,Strong themes and violence
+Airplane Mode,https://www.classification.gov.au/titles/airplane-mode-0,very mild,mild,very mild,none,none,none,Mild violence
+Beau Is Afraid,https://www.classification.gov.au/titles/beau-afraid-0,strong,strong,strong,moderate,strong,high,High impact sex
+Dicks The Musical,https://www.classification.gov.au/titles/dicks-musical,strong,mild,strong,moderate,moderate,strong,"Strong crude sexual humour, coarse language and sex scenes"
+Doctor Sleep,https://www.classification.gov.au/titles/doctor-sleep,strong,strong,moderate,moderate,moderate,mild,Strong horror themes and violence
+Echo Valley,https://www.classification.gov.au/titles/echo-valley-0,strong,moderate,strong,moderate,none,very mild,Strong themes and coarse language
+Girls Trip,https://www.classification.gov.au/titles/girls-trip,strong,moderate,moderate,moderate,strong,strong,Strong crude sexual humour and coarse language
+Hardcore Henry,https://www.classification.gov.au/titles/hardcore-henry,strong,high,strong,moderate,moderate,strong,High impact violence
+Hell Fest,https://www.classification.gov.au/titles/hell-fest,strong,strong,moderate,moderate,none,moderate,Strong horror themes and violence
+Hellraiser,https://www.classification.gov.au/titles/hellraiser-1,high,high,moderate,moderate,moderate,strong,High impact horror violence
+High-Rise,https://www.classification.gov.au/titles/high-rise-2,strong,strong,moderate,moderate,strong,strong,"Strong themes, violence, sex scenes and nudity"
+Hot Girls Wanted,https://www.classification.gov.au/titles/hot-girls-wanted,high,none,strong,moderate,strong,high,High impact sexual themes and actual sexual activity
+Killer Joe,https://www.classification.gov.au/titles/killer-joe,high,high,moderate,moderate,high,high,"High impact violence, sexual themes and nudity"
+Ma,https://www.classification.gov.au/titles/ma-3,strong,strong,strong,moderate,strong,moderate,"Strong themes, violence, coarse language and brief nudity"
+Marlowe,https://www.classification.gov.au/titles/marlowe-0,strong,strong,moderate,moderate,none,moderate,Strong violence and injury detail
+Nobody's Fool,https://www.classification.gov.au/titles/nobodys-fool,strong,very mild,moderate,moderate,mild,strong,Strong crude sexual humour
+Sharp Stick,https://www.classification.gov.au/titles/sharp-stick,strong,none,moderate,moderate,moderate,strong,Strong sexual themes and sex scenes
+Slaughterhouse Rulez,https://www.classification.gov.au/titles/slaughterhouse-rulez,strong,strong,strong,moderate,mild,moderate,"Strong horror themes, violence and coarse language"
+Small Engine Repair,https://www.classification.gov.au/titles/small-engine-repair,strong,strong,strong,moderate,moderate,moderate,"Strong themes, violence and coarse language"
+Super Troopers 2,https://www.classification.gov.au/titles/super-troopers-2,strong,moderate,strong,moderate,strong,strong,"Strong crude sexual humour, nudity and coarse language"
+Synchronic,https://www.classification.gov.au/titles/synchronic,strong,strong,moderate,moderate,none,moderate,Strong themes and violence

@@ -28,11 +28,15 @@ import data_extraction as da
 import modelling as md
 import utils
 
-seed = 42
+from typing import List
+
 
 def _extract_sem_rep_for_single_movie(all_segments, pooling_model, pooling_strat, data_collator, device, batch_size=64):
     
-    torch.backends.cuda.matmul.allow_tf32 = True
+    if 'fp32' in pooling_strat:
+        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+    else:
+        torch.backends.cuda.matmul.allow_tf32 = True
 
     loader = torch.utils.data.DataLoader(
         all_segments,
@@ -41,8 +45,6 @@ def _extract_sem_rep_for_single_movie(all_segments, pooling_model, pooling_strat
         pin_memory=True,
         shuffle=False
     )
-    # TODO: consider removing as autotuning every movie might slow it down
-    # pooling_model = torch.compile(pooling_model, mode="max-autotune")
     embeddings_list = []
     
     with torch.no_grad():
@@ -51,28 +53,38 @@ def _extract_sem_rep_for_single_movie(all_segments, pooling_model, pooling_strat
             batch = {k: v.to(device, non_blocking=True) for k, v in batch.items()}
             outputs = pooling_model(**batch, output_hidden_states=True)
             
-            # TODO: create functions for different pooling sizes
-            if pooling_model.name_or_path in md.pooling_models[:-1]:
-                # Get the CLS rep from the second last hidden layer since last one may be too finetuned on classification task
-                embeddings = outputs.hidden_states[-2][:, 0, :]
+            # Get the CLS rep and do post processing during prediction
+            if pooling_model.name_or_path in md.pooling_models[:-1] and 'CLS' in pooling_strat:
+                pooled = torch.stack([outputs.hidden_states[-2][:, 0, :], outputs.hidden_states[-1][:, 0, :]], dim=2)
             else:
-                embeddings = outputs[0] # First element of model_output contains all token embeddings
+                embeddings = outputs.hidden_states[layer_idx] # First element of model_output contains all token embeddings
                 mask = batch['attention_mask'].unsqueeze(-1).expand(embeddings.size())
-                embeddings = embeddings.masked_fill(mask == 0, torch.tensor(-1e9, dtype=torch.float16))
 
-                if ii > 0 and embeddings.shape != embeddings_list[0].shape:
-                    pad = torch.zeros(embeddings_list[0].shape, dtype=embeddings.dtype, device=embeddings.device)
-                    B, T, H = embeddings.shape
-                    pad[:B, :T, :H] = embeddings
-                    embeddings = pad
+                # Mean pooling
+                token_embeddings_mean = embeddings.clone()
+                token_embeddings_mean[mask == 0] = 0
+                pooled_mean = token_embeddings_mean.sum(dim=1) / mask.sum(dim=1)
+
+                # Max pooling
+                token_embeddings_max = embeddings.clone()
+                token_embeddings_max[mask == 0] = -1e4
+                pooled_max = token_embeddings_max.max(dim=1)[0]
                 
-            embeddings_list.append(embeddings)
+                pooled = torch.stack([pooled_mean, pooled_max], dim=1) 
+
+            embeddings_list.append(pooled)
 
     # Flatten and stack batches
     all_embeddings_arr = torch.cat(embeddings_list, dim=0)
-    
+
     # TODO: create functions for different pooling strategies
-    pooled_layers = torch.stack([all_embeddings_arr.max(dim=0)[0], all_embeddings_arr.mean(dim=0)], dim=-1)
+    if pooling_model.name_or_path in md.pooling_models[:-1] and 'CLS' in pooling_strat:
+        pooled_layers = all_embeddings_arr.max(dim=0)[0]
+        # torch.stack([all_embeddings_arr.mean(dim=0), , dim=0)
+    else:
+        max_of_max = all_embeddings_arr[:, 0, :].max(dim=0)[0]
+        mean_of_mean = all_embeddings_arr[:, 1, :].mean(dim=0)
+        pooled_layers = torch.cat([max_of_max, mean_of_mean])
     
     # Cleanup GPU memory and artifacts
     del all_embeddings_arr, embeddings_list, outputs
@@ -213,35 +225,35 @@ def get_or_create_movie_sem_reps(df, pooling_model_name, rep_type, packing_type,
     # Identify which movies we need to build representations for
     file_group = md.sem_rep_filename.format(movie='', model=pooling_model_name.replace('/', '_'), rep_type=rep_type, packing_type=packing_type, pooling_strat=pooling_strat)
     stored_movies = [x.split('_')[0] for x in os.listdir(md.sem_rep_dir) if x.endswith(file_group)]
-    df['cleaned_name'] = df.movie.str.replace(' ', '')
-    filtered_df = df[~df.cleaned_name.isin(stored_movies)]
-    missing_movies = filtered_df.cleaned_name.unique()
+    filtered_df = df[~df.movie.isin(stored_movies)]
+    missing_movies = filtered_df.movie.unique()
     
     # Initialise models, tokenizers and similar artifacts
     tokenizer = AutoTokenizer.from_pretrained(pooling_model_name)
     modelClass = AutoModel if 't5' not in pooling_model_name else T5EncoderModel
-    no_pooling_layer = [md.pooling_models[3], md.pooling_models[4], md.pooling_models[5]]
-    model_kwargs = {} if pooling_model_name in no_pooling_layer else {'add_pooling_layer': False}
-    pooling_model = modelClass.from_pretrained(pooling_model_name, **model_kwargs)
-    # TODO: test with full precision
-    pooling_model.half()
+    no_pooling_layer = md.pooling_models[3:6]
+    # model_kwargs = {} if pooling_model_name in no_pooling_layer else {'add_pooling_layer': False}
+    pooling_model = modelClass.from_pretrained(pooling_model_name) #**model_kwargs
+
+    if not 'fp32' in pooling_strat:
+        pooling_model.half()
     pooling_model.to(device)
     pooling_model.eval()
-    padding_args = {'pad_to_multiple_of': 16} if pooling_model_name in md.pooling_models[:-1] else {'padding': 'max_length'}
-    data_collator = DataCollatorWithPadding(tokenizer=tokenizer, return_tensors="pt", **padding_args)
+    # padding_args = {'pad_to_multiple_of': 16} if pooling_model_name in md.pooling_models[:-1] else {'padding': 'max_length'}
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer, return_tensors="pt", padding=True) # **padding_args
     
     batch_size = 32 if packing_type == 'chunks' else 64
     # batch_size = 64 if rep_type == 'dialogue' else 32
     
     if len(missing_movies) > 0:
-        if rep_type == 'dialogue':
-            filtered_df = filtered_df[filtered_df.type.eq('dialogue')]
+        if rep_type != 'transcript':
+            filtered_df = filtered_df[filtered_df.type.eq(rep_type)]
             
         if packing_type == 'chunks':
             all_enc, movie_indices = _get_chunked_encodings(filtered_df, stride, tokenizer, enc_max_len)
-            logging.info('Finished chunking encodings')
+
         else:
-            # Consider removing narrator aggregation if minimal performance impact occurs
+            # TODO: Consider removing narrator aggregation if minimal performance impact occurs
             filtered_df = _agg_narrator_seg(filtered_df).sort_values(['movie', 'start_time'])
             all_enc, movie_indices = _get_utterance_encodings(filtered_df, tokenizer, enc_max_len, label_speech_type=False)
 
@@ -266,7 +278,7 @@ def get_or_create_movie_sem_reps(df, pooling_model_name, rep_type, packing_type,
         with open(movie_fp, 'wb') as fileobj:
             pickle.dump(sem_rep, fileobj)
 
-        if ii % 10 == 9:
+        if ii % 10 == 9 or 'fp32' in pooling_strat:
             if use_profiler:
                 cpu_df_list, gpu_df_list = _accumulate_profile_results(prof, cpu_df_list, gpu_df_list)
                 prof = torch.profiler.profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=False, with_stack=False)
@@ -289,7 +301,9 @@ def get_or_create_movie_sem_reps(df, pooling_model_name, rep_type, packing_type,
 
     rep_list = []
     
-    for movie_filename in os.listdir(md.sem_rep_dir):
+    sorted_films = os.listdir(md.sem_rep_dir)
+    sorted_films.sort()
+    for movie_filename in sorted_films:
         if movie_filename.endswith(file_group):
             try:
                 with open(os.path.join(md.sem_rep_dir, movie_filename), 'rb') as fileobj:
@@ -298,9 +312,22 @@ def get_or_create_movie_sem_reps(df, pooling_model_name, rep_type, packing_type,
                 logging.info(f'Failed to open pickle of {movie_filename}')
             
     return rep_list
-        
+
+
+def get_cases(models: List[str], rep_types: List[str], packing_types: List[str], pooling_strats: List[str]):
     
-def main():
+    cases = []
+    # Iterate through all pooling models and chunking styles
+    for pooling_model_name in models:
+        for rep_type in rep_types:
+            for packing_type in packing_types:
+                for pooling_strat in pooling_strats: 
+                    cases.append((pooling_model_name, rep_type, packing_type, pooling_strat))
+                                 
+    return cases
+
+    
+def main(models: List[str], rep_types: List[str], packing_types: List[str], pooling_strats: List[str]):
 
     torch.cuda.empty_cache()
     # torch.cuda.ipc_collect()
@@ -309,29 +336,27 @@ def main():
     # Get all transcript data
     df = pd.read_parquet(da.cleaned_dataset_fp).sort_values(['movie', 'start_time'])
 
-    for col in md.cat_cols:
-        df[col] = md.convert_col_to_ordinal(df[col])
-        
     use_profiler = False
     
     # Iterate through all pooling models and chunking styles
-    for pooling_model_name in md.pooling_models:
-        logging.info(f'Curr Model: {pooling_model_name}')
-        for rep_type in ['dialogue', 'transcript']:
-            logging.info(f'Text Content: {rep_type}')
-            for packing_type in ('utterances', 'chunks'):
-                logging.info(f'Packing Type: {packing_type}')
-                for pooling_strat in ['lhs2CLS']:
-                    # clear_sem_reps_for_cat(pooling_model_name, rep_type, packing_type, pooling_strat, n=20)
-                    logging.info(f'Pooling Strategy: {pooling_strat}')
-                    get_or_create_movie_sem_reps(df, pooling_model_name, rep_type, packing_type, pooling_strat, device, use_profiler=use_profiler)
+    cases = get_cases(models, rep_types, packing_types, pooling_strats)
+    for pooling_model_name, rep_type, packing_type, pooling_strat in cases:
+        # clear_sem_reps_for_cat(pooling_model_name, rep_type, packing_type, pooling_strat, n=20)
+        logging.info(f'Curr Model: {pooling_model_name}, {rep_type}, {packing_type}, {pooling_strat}')
+        get_or_create_movie_sem_reps(df, pooling_model_name, rep_type, packing_type, pooling_strat, device, use_profiler=use_profiler)
 
-                    # TODO: ensure logging directory exists
-                    torch.cuda.empty_cache()
-                    # torch.cuda.ipc_collect()
-                    torch.cuda.reset_peak_memory_stats()
-                    gc.collect()
+        # TODO: ensure logging directory exists
+        torch.cuda.empty_cache()
+        # torch.cuda.ipc_collect()
+        torch.cuda.reset_peak_memory_stats()
+        gc.collect()
                 
                 
 if __name__ == "__main__":
-    main()
+    models = [
+        'cardiffnlp/twitter-roberta-large-sensitive-multilabel',
+        'cardiffnlp/twitter-roberta-base-sentiment-latest',
+        'mrm8488/t5-base-finetuned-imdb-sentiment'
+    ]
+    main(md.pooling_models[:1], ['dialogue'], ['chunks'], [md.pooling_strategies[-1]])
+    # main(md.pooling_models, md.rep_types, md.packing_types, md.pooling_strategies)

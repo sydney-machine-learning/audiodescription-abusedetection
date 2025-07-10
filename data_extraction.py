@@ -12,6 +12,8 @@ from transformers import (
     AutoTokenizer
 )
 
+from evaluate import load
+
 import kaggle
 from nltk import download
 download('stopwords')
@@ -52,6 +54,10 @@ os.makedirs(diarization_dir, exist_ok=True)
 os.makedirs(trans_mp3_dir, exist_ok=True)
 os.makedirs(transcription_dir, exist_ok=True)
 os.makedirs(voice_activity_dir, exist_ok=True)
+
+
+def clean_movie_name_series(series: pd.Series) -> pd.Series:
+    return series.str.strip().str.replace('-', ' ').str.replace('.', '').str.title()
 
 
 def get_transcript_list():
@@ -191,7 +197,6 @@ def rename_movie_files(movie_name: str, new_name: str):
         logging.info(f'Renamed no artifacts for {movie_name}')
     else:
         logging.info(f'Success')
-        
 
 
 def convert_time_to_readable_txt(df: pd.DataFrame, cols: List[Tuple[str, str]]):
