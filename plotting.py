@@ -19,8 +19,8 @@ def plot_ngrams(ngram_df: pd.DataFrame, title: str, output_path: str):
     plt.title(title, fontsize=20)
     plt.xlabel("Frequency", fontsize=20)
     plt.ylabel("")
-    # plt.xticks(fontsize=20)
-    plt.yticks(rotation=45, fontsize=20)  # Rotate y-ticks and adjust fontsize
+    plt.xticks(fontsize=20)
+    plt.yticks(rotation=45, fontsize=16)  # Rotate y-ticks and adjust fontsize
     plt.tight_layout()
     plt.savefig(output_path)
     

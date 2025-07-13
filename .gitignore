@@ -16,3 +16,5 @@ manual_transcript_standardisation.ipynb
 
 *.code-workspace
 *.ckpt
+
+.vscode/*

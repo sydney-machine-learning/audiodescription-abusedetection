@@ -106,7 +106,9 @@ def clean_text(txt: str) -> str:
 def transcribe_segments(transcript_fp: str, seg_df_path: str, wav_filepath: str, whisper_model: str, whisper_config: Dict, narr_cs_limit: float, device, convert_dialogue=False):
     
     segments_df = pd.read_parquet(seg_df_path)
-    narrator_true_pos_mask = segments_df.is_dialogue.eq(convert_dialogue) & segments_df.cosine_sim.gt(narr_cs_limit)
+    narrator_true_pos_mask = segments_df.is_dialogue.eq(False) & segments_df.cosine_sim.gt(narr_cs_limit)
+    if convert_dialogue:
+        narrator_true_pos_mask = np.logical_not(narrator_true_pos_mask)
     narrator_df = segments_df[narrator_true_pos_mask].copy().reset_index(drop=True)
     
     model = whisper.load_model(whisper_model, device=device)

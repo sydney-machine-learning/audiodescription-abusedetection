@@ -1,22 +1,20 @@
 import pandas as pd
 import numpy as np
 
-import torch
-from transformers import TrainerCallback, AutoModelForSequenceClassification
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support, f1_score, roc_auc_score
-
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.util import ngrams
 from collections import Counter
-
-from typing import List, Callable
 
 import re
 import os
 
 sem_rep_dir = os.path.join('data', 'semantic_representations')
 sem_rep_filename = '{movie}_{model}_{rep_type}_{packing_type}_{pooling_strat}.pkl'
+
+results_dir = os.path.join('data', 'results')
+row_level_classification_fp = os.path.join(results_dir, 'row_level_classification-')
+sem_rep_metrics_fp = os.path.join(results_dir, 'sem_rep_metrics-')
 
 cat_cols = ['themes', 'violence', 'drug_use', 'sex']
 full_cat_cols = ['themes', 'violence', 'language', 'drug_use', 'nudity', 'sex']
@@ -25,21 +23,21 @@ classifications = ['G', 'PG', 'M', 'MA 15+', 'R 18+']
 # TODO: create dict of models with actual properties
 pooling_models = [
     'cardiffnlp/twitter-roberta-large-sensitive-multilabel', # 0
+    'cardiffnlp/twitter-roberta-large-emotion-latest',
     'cardiffnlp/twitter-roberta-base-offensive',
     'cardiffnlp/twitter-roberta-base-sentiment-latest',
     # 'FacebookAI/roberta-large',
     # 'nickmuchi/setfit-finetuned-movie-genre-prediction',
     # 'GroNLP/hateBERT',
     # 'microsoft/deberta-v3-large',
-    'joeddav/distilbert-base-uncased-go-emotions-student', 
     'mrm8488/t5-base-finetuned-imdb-sentiment',
-    # 'NemoraAi/modernbert-chat-moderation-X-V2',
-    'sentence-transformers/all-MiniLM-L6-v2'  # 5
+    'NemoraAi/modernbert-chat-moderation-X-V2',
+    # 'sentence-transformers/all-MiniLM-L6-v2'  # 5
 ]
 
 rep_types = ['dialogue', 'narration', 'transcript']
 packing_types = ['chunks', 'utterances']
-pooling_strategies = ['lhs2CLS', 'lhs1CLS'] #lhs2CLS_fp32
+pooling_strategies = ['lhsCLS', 'lhsCLS-fp32']
 
 
 def convert_col_to_ordinal(series: pd.Series, compact: bool = True) -> pd.Series:
@@ -64,7 +62,7 @@ def convert_col_to_ordinal(series: pd.Series, compact: bool = True) -> pd.Series
     
     return new_series
             
-
+# TODO: reference properly (changed heavily) and/or improve efficiency (so slow)
 def process_text(text: str, excl_stopwords: bool):
     
     stop_words = set(stopwords.words('english'))
@@ -85,5 +83,3 @@ def get_ngram_counts(text, n, top_n=10, excl_stopwords: bool = True):
     ngram_df['Ngram'] = ngram_df['Ngram'].apply(lambda x: ' '.join(x))
     
     return ngram_df
-
-

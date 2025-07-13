@@ -34,7 +34,6 @@ import warnings
 warnings.filterwarnings("ignore")
 
 subtitles_wer_scores_fp = os.path.join('data', 'subtitles_wer_scores.parquet')
-# TODO: remove to WER
 sub_wer_scores_df = pd.DataFrame(columns=['movie', 'cer', 'wer'])
 if os.path.exists(subtitles_wer_scores_fp):
     sub_wer_scores_df = pd.read_parquet(subtitles_wer_scores_fp).drop_duplicates(['movie'])
@@ -54,7 +53,7 @@ for ii, cleaned_movie_name in enumerate(filtered_sub_df.movie.unique()):
     curr_sub_df = filtered_sub_df[filtered_sub_df.movie.eq(cleaned_movie_name)]
     if curr_sub_df.shape[0] == 0: raise ValueError('Subtitle Dataframe is empty')
 
-    sub_txt = ''.join(curr_sub_df.text.str.replace('[\.,"\?!♪<>]', '', regex=True)).lower().replace('-', ' ')
+    sub_txt = ' '.join(curr_sub_df.text.str.replace('[\.,"\?!♪♪<>]', '', regex=True)).lower().replace('-', ' ')
 
     # Work out original file name
     movie_name = name_conv_dict[cleaned_movie_name]
@@ -66,16 +65,17 @@ for ii, cleaned_movie_name in enumerate(filtered_sub_df.movie.unique()):
     # Reapply VAD to get shortened WAV file
     # TODO: check discrepancies for high movies for special characters before rerunning
     stt.apply_silero_vad_to_wav(mp3_filename, wav_filepath, vad_df_path, silero_threshold=silero_threshold)
-    curr_stt_df = stt.transcribe_segments(os.path.join('data', 'temp.parquet'), seg_df_path, wav_filepath, whisper_model, whisper_config, 0, device, convert_dialogue=True)
+    curr_stt_df = stt.transcribe_segments(os.path.join('data', 'temp.parquet'), seg_df_path, wav_filepath, whisper_model, whisper_config, narr_cosine_sim_lim, device, convert_dialogue=True)
     curr_stt_df = curr_stt_df[curr_stt_df['text'].ne(' Thank you.')]
-    curr_sub_df = sub_df[sub_df.movie.eq(cleaned_movie_name)]
+
     cleaned_sub_series = curr_sub_df.text.str.replace('[\.,"\?!]', '', regex=True) \
-        .str.replace('([<\[\(]/?[\w\s]+[\]\)>])|(\w+:\s)', '', regex=True) \
+        .str.replace('([\[\(]/?[\w\s]+[\]\)])|(\w+:\s)', '', regex=True) \
         .str.replace('-', ' ') \
         .str.replace('[‘’]', "'", regex=True) \
-        .str.replace('[\.“”;…]', '', regex=True) \
+        .str.replace('[\.“”;…♪\?]', '', regex=True) \
         .str.replace('\s+', ' ', regex=True).str.strip()
     sub_txt = ' '.join(cleaned_sub_series[cleaned_sub_series.ne('')]).lower()
+    sub_txt = re.sub('\s+', ' ', sub_txt)
 
     trans_txt = ''.join(curr_stt_df.text.str.replace('[\.,"\?!]', '', regex=True)).lower().replace('-', ' ')
 

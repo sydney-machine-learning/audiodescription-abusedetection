@@ -38,6 +38,7 @@ transcript_df_fp = '{movie_name}-transcript.parquet'
 all_transcripts_df_dir = os.path.join(transcription_dir, 'all_transcripts.parquet')
 
 diarization_dir = os.path.join(audio_vault_dir, 'diarization_segments')
+# TODO: rename both var and directory
 trans_mp3_dir = os.path.join(audio_vault_dir, 'longitudinal_movies')
 
 credits_ts_fp = os.path.join(transcription_dir, 'manual', 'credit_removal_timestamps.csv')
