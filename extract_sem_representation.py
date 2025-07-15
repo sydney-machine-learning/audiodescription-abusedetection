@@ -280,12 +280,14 @@ def get_or_create_movie_sem_reps(df, pooling_model_name, rep_type, packing_type,
     
     sorted_films = os.listdir(md.sem_rep_dir)
     sorted_films.sort()
+    rep_list_movies = []
     for movie_filename in sorted_films:
         if movie_filename.endswith(file_group):
             with open(os.path.join(md.sem_rep_dir, movie_filename), 'rb') as fileobj:
                 rep_list.append(pickle.load(fileobj))
+                rep_list_movies.append(movie_filename.removesuffix(file_group))
             
-    return rep_list, sorted_films
+    return rep_list, rep_list_movies
 
 
 def get_cases(models: List[str], rep_types: List[str], packing_types: List[str], pooling_strats: List[str]):
@@ -356,10 +358,5 @@ def main(models: List[str], rep_types: List[str], packing_types: List[str], pool
                 
                 
 if __name__ == "__main__":
-    models = [
-        'cardiffnlp/twitter-roberta-large-sensitive-multilabel',
-        'cardiffnlp/twitter-roberta-base-sentiment-latest',
-        'mrm8488/t5-base-finetuned-imdb-sentiment'
-    ]
     main(md.pooling_models, md.rep_types, ['chunks'], md.pooling_strategies)
     main(md.pooling_models, md.rep_types, md.packing_types, md.pooling_strategies[:1])

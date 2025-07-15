@@ -8,12 +8,14 @@ import matplotlib.pyplot as plt
 
 import os
 import re
+import sys
 
 from evaluate import load
 
 import torch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# TODO: switch to functions and main() setup
 # TODO: put finalised STT constants in stt file when you clean up everything
 narr_cosine_sim_lim = 0.14
 
@@ -48,9 +50,15 @@ cer, wer = load('cer'), load('wer')
 results = []
 word_counts = []
 
-for ii, cleaned_movie_name in enumerate(filtered_sub_df.movie.unique()):
+movie_list = list(filtered_sub_df.movie.unique())
+
+# Reverse movie list if negative commandline argument is passed in (so independent scripts can be ran)
+if len(sys.argv) > 1 and int(sys.argv[1]) < 0:
+    movie_list = movie_list[::-1]
+
+for ii, cleaned_movie_name in enumerate(movie_list):
     logging.info(f'{ii} / {filtered_sub_df.movie.nunique()}')
-    curr_sub_df = filtered_sub_df[filtered_sub_df.movie.eq(cleaned_movie_name)]
+    curr_sub_df = sub_df[sub_df.movie.eq(cleaned_movie_name)]
     if curr_sub_df.shape[0] == 0: raise ValueError('Subtitle Dataframe is empty')
 
     sub_txt = ' '.join(curr_sub_df.text.str.replace('[\.,"\?!♪♪<>]', '', regex=True)).lower().replace('-', ' ')
@@ -63,7 +71,6 @@ for ii, cleaned_movie_name in enumerate(filtered_sub_df.movie.unique()):
     wav_filepath = os.path.join(da.trans_mp3_dir, f'{movie_name}_speech_only.wav')
 
     # Reapply VAD to get shortened WAV file
-    # TODO: check discrepancies for high movies for special characters before rerunning
     stt.apply_silero_vad_to_wav(mp3_filename, wav_filepath, vad_df_path, silero_threshold=silero_threshold)
     curr_stt_df = stt.transcribe_segments(os.path.join('data', 'temp.parquet'), seg_df_path, wav_filepath, whisper_model, whisper_config, narr_cosine_sim_lim, device, convert_dialogue=True)
     curr_stt_df = curr_stt_df[curr_stt_df['text'].ne(' Thank you.')]

@@ -7,7 +7,22 @@ import os
 output_dir = os.path.join('output')
 os.makedirs(output_dir, exist_ok=True)
 
-sns.set_style("whitegrid")
+sns.set_style('whitegrid')
+
+plt.rcParams.update({
+    'figure.figsize': (3.5, 2.5),
+    'font.size': 8,
+    'axes.titlesize': 8,
+    'axes.labelsize': 8,
+    'xtick.labelsize': 7,
+    'ytick.labelsize': 7,
+    'legend.fontsize': 7,
+    'legend.title_fontsize': 7,
+    'lines.linewidth': 1,
+    'lines.markersize': 4,
+    'figure.dpi': 300,
+    'savefig.dpi': 300,
+})
 
 acb_palette = ['#fff100', '#00adee', '#ED1C24']
 full_acb_palette = ['#afafaf', '#0db14b', '#fff100', '#00adee', '#ED1C24', '#000000']
@@ -17,8 +32,8 @@ def plot_ngrams(ngram_df: pd.DataFrame, title: str, output_path: str):
     plt.figure(figsize=(10, 8))
     sns.barplot(x='Frequency', y='Ngram', data=ngram_df, hue='type' if 'type' in ngram_df else None)
     plt.title(title, fontsize=20)
-    plt.xlabel("Frequency", fontsize=20)
-    plt.ylabel("")
+    plt.xlabel('Frequency', fontsize=20)
+    plt.ylabel('')
     plt.xticks(fontsize=20)
     plt.yticks(rotation=45, fontsize=16)  # Rotate y-ticks and adjust fontsize
     plt.tight_layout()

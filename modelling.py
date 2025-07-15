@@ -61,6 +61,20 @@ def convert_col_to_ordinal(series: pd.Series, compact: bool = True) -> pd.Series
         )
     
     return new_series
+
+
+def agg_and_sort_cv_results(hypothesis: str, top_n: int = 0) -> pd.DataFrame:
+
+    df = pd.read_parquet(f'{sem_rep_metrics_fp}{hypothesis}.parquet') \
+        .groupby(['model', 'cat', 'rep_type', 'packing_type', 'classifier']) \
+        .agg({'f1_macro': 'mean', 'acc': 'mean', 'auroc': 'mean'}) \
+        .reset_index() \
+        .sort_values(['f1_macro'], ascending=False)
+    
+    if top_n > 0:
+        df = df.groupby('cat').head(top_n).reset_index(drop=True)
+
+    return df
             
 # TODO: reference properly (changed heavily) and/or improve efficiency (so slow)
 def process_text(text: str, excl_stopwords: bool):
