@@ -15,9 +15,10 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, classification_report, f1_score, confusion_matrix, roc_auc_score, ConfusionMatrixDisplay
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 from sklearn.svm import LinearSVC
 from sklearn.decomposition import PCA
+from sklearn.utils.class_weight import compute_sample_weight
 
 from scipy import stats
 
@@ -31,11 +32,12 @@ import modelling as md
 
 import os
 
-from typing import Tuple, Dict
+from typing import Tuple, Dict, List
 import numpy.typing as npt
 
 n_folds = 5
 seed = 42
+# jobs to 1 for debugging and -1 for performance
 n_jobs = -1
 
 def get_text_and_ratings() -> Tuple[pd.DataFrame, npt.ArrayLike]:
@@ -92,8 +94,8 @@ def perform_baseline_log_reg(df: pd.DataFrame, ratings: npt.ArrayLike, output_di
 
                 pred_labels = log_reg.predict(X_test_vec)
                 log_reg_results.append({
-                    'f1_macro': f1_score(y_test, pred_labels, average='macro'),
-                    'acc': accuracy_score(y_test, pred_labels),
+                    'f1_macro': f1_score(y_test, pred_labels, average='macro') * 100,
+                    'acc': accuracy_score(y_test, pred_labels) * 100,
                     'cat': cat,
                     'rep_type': rep_type
                 })
@@ -111,8 +113,8 @@ def calc_results(model_name: str, model, X_test, y_true: npt.ArrayLike, row: Dic
     y_pred = model.predict(X_test)
 
     curr_row['pca'] = has_pca
-    curr_row['acc'] = accuracy_score(y_true.reshape(-1), y_pred.reshape(-1))
-    curr_row['f1_macro'] = f1_score(y_true.reshape(-1), y_pred.reshape(-1), average='macro')
+    curr_row['acc'] = accuracy_score(y_true.reshape(-1), y_pred.reshape(-1)) * 100
+    curr_row['f1_macro'] = f1_score(y_true.reshape(-1), y_pred.reshape(-1), average='macro') * 100
 
     if calc_y_prob:
         y_prob = model.predict_proba(X_test)
@@ -153,10 +155,10 @@ def get_mode_filter_indices(y_train: npt.ArrayLike) -> npt.ArrayLike:
     return indices_excl_excess_mode
 
 
-def perform_sem_rep_modelling(df: pd.DataFrame, ratings: npt.ArrayLike, max_iter: int, hypothesis: str, cases: Tuple[str, str, str, str], fast_run: bool, strem_rep_type: bool, concat_pooling=None):
+def perform_sem_rep_modelling(df: pd.DataFrame, ratings: npt.ArrayLike, max_iter: int, hypothesis: str, cases: Tuple[str, str, str, str], fast_run: bool, concat_pooling=None, pca_params=None, emote_cases: Dict[str, bool] = None, cats_lists: List[List[str]] = None):
 
-    sem_rem_metrics_fp = f'{md.sem_rep_metrics_fp}{hypothesis.replace("/", "_")}.parquet'
-    row_level_fp = f'{md.row_level_classification_fp}{hypothesis.replace("/", "_")}.parquet'
+    sem_rem_metrics_fp = f'{md.sem_rep_metrics_fp}{hypothesis}.parquet'
+    row_level_fp = f'{md.row_level_classification_fp}{hypothesis}.parquet'
     row_level_df = None
 
     if os.path.exists(sem_rem_metrics_fp):
@@ -166,45 +168,56 @@ def perform_sem_rep_modelling(df: pd.DataFrame, ratings: npt.ArrayLike, max_iter
     
     logging.info(f'{hypothesis.upper()} - Performing Semantic Representation Modelling - No Files found')
 
-    os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+    k_fold = StratifiedKFold(n_splits=n_folds, shuffle=True if 'variance' in hypothesis else False) # , shuffle=True, random_state=seed
+    scaler = StandardScaler()
+    svc_model = LinearSVC(class_weight='balanced', max_iter=max_iter)
 
-    k_fold = StratifiedKFold(n_splits=n_folds) # , shuffle=True, random_state=seed
-    scaler = MinMaxScaler()
-    basic_svc_model = LinearSVC(class_weight='balanced', max_iter=max_iter)
-    basic_log_reg_model = LogisticRegression(class_weight='balanced', max_iter=max_iter, n_jobs=n_jobs)
-    pca = PCA(n_components=0.95) # 32 if fast_run else 64
+    basic_model = LogisticRegression(class_weight='balanced', max_iter=max_iter, n_jobs=n_jobs)
+
+    movie_list = list(df.movie.unique())
+
+    if pca_params is None:
+        pca_params = {'n_components': 32}
+    use_pca = pca_params['n_components'] != 'original'
+
+    pca = PCA(**pca_params)
+
+    if emote_cases is None:
+        emote_cases = {cat: False for cat in md.full_cat_cols}
 
     results_metrics = []
     row_level_classification_list = []
 
-    for pooling_model_name, rep_type, packing_type, pooling_strat in tqdm(cases):
+    for ii, (pooling_model_name, rep_type, packing_type, pooling_strat) in enumerate(tqdm(cases)):
 
         logging.info(f'{pooling_model_name} {rep_type} {packing_type} {pooling_strat}')
-        rep_list, movies_list = esr.get_or_create_movie_sem_reps(df, pooling_model_name, rep_type, packing_type, pooling_strat, device, use_profiler=False)
+        rep_list = esr.get_or_create_movie_sem_reps(df, pooling_model_name, rep_type, packing_type, pooling_strat, device, use_profiler=False)
 
         if concat_pooling is not None:
             rep_list = filter_CLS_rep(rep_list, concat_pooling)
 
+        # Stack results, shift to numpy and reshape
+        no_emote_X = torch.stack([x.reshape(-1) for x in rep_list]).cpu().numpy().reshape(len(rep_list), -1)
+
         if 'emotion' in hypothesis:
             emotion_model = next(x for x in md.pooling_models if 'emotion' in x)
-            emotion_rep_list, _ = esr.get_or_create_movie_sem_reps(df, emotion_model, rep_type, packing_type, pooling_strat, device, use_profiler=False)
+            emotion_rep_list = esr.get_or_create_movie_sem_reps(df, emotion_model, rep_type, packing_type, pooling_strat, device, use_profiler=False)
 
             if concat_pooling is not None:
                 emotion_rep_list = filter_CLS_rep(emotion_rep_list, concat_pooling)
             rep_list = [torch.cat([x.reshape(-1), y.reshape(-1)], dim=0) for x, y in zip(rep_list, emotion_rep_list)]
-
-        # Normalise and stack results
-        norm_rep_tensor = torch.nn.functional.normalize(torch.stack([x.reshape(-1) for x in rep_list]))
-        X = norm_rep_tensor.cpu().numpy().reshape(len(rep_list), -1)
+            emote_X = torch.stack([x.reshape(-1) for x in rep_list]).cpu().numpy().reshape(len(rep_list), -1)
 
         y = np.array(ratings)
+        case_cats = md.full_cat_cols if cats_lists is None else cats_lists[ii]
 
-        for ii, cat in enumerate(md.full_cat_cols):
-            # Chunks is faster and better for all categories except nudity
-            if strem_rep_type and ((packing_type == 'utterances' and cat != 'nudity') or (packing_type == 'chunks' and cat == 'nudity')):
-                continue
+        for cat in case_cats:
+            cat_idx = md.full_cat_cols.index(cat)
 
-            y = np.array(ratings)[:, ii]
+            # Check whether category benefits from emotion or not
+            X = emote_X.copy() if emote_cases[cat] else no_emote_X.copy()
+            
+            y = np.array(ratings)[:, cat_idx]
             for train_index, test_index in k_fold.split(X, y):
                 X_train, X_test, y_train, y_test = X[train_index], X[test_index], y[train_index], y[test_index]
 
@@ -214,39 +227,43 @@ def perform_sem_rep_modelling(df: pd.DataFrame, ratings: npt.ArrayLike, max_iter
                     y_train = y_train[mode_filter_indices]
 
                 curr_data = {
-                    'cat': cat, 'model': pooling_model_name, 'rep_type': rep_type,
-                    'packing_type': packing_type, 'pooling_strat': pooling_strat
+                    'cat': cat, 'model': pooling_model_name, 'rep_type': rep_type, 'packing_type': packing_type,
+                    'pooling_strat': pooling_strat, 'hypothesis': hypothesis
                 }
 
                 X_train_scaled = scaler.fit_transform(X_train)
                 X_test_scaled = scaler.transform(X_test)
 
-                X_train_scaled_pca = pca.fit_transform(X_train_scaled)
-                X_test_scaled_pca = pca.transform(X_test_scaled)
+                if use_pca:
+                    X_train_scaled_pca = pca.fit_transform(X_train_scaled)
+                    X_test_scaled_pca = pca.transform(X_test_scaled)
+                else:
+                    X_train_scaled_pca = X_train_scaled
+                    X_test_scaled_pca = X_test_scaled
 
-                basic_log_reg_model.fit(X_train_scaled_pca, y_train)
-                curr_pca_log_data = calc_results('Log Reg', basic_log_reg_model, X_test_scaled_pca, y_test, curr_data, calc_y_prob=True, has_pca=True)
+                basic_model.fit(X_train_scaled_pca, y_train)
+                curr_pca_log_data = calc_results('Log Reg', basic_model, X_test_scaled_pca, y_test, curr_data, calc_y_prob=True, has_pca=use_pca)
                 results_metrics.append(curr_pca_log_data)
 
                 if not fast_run:
-                    basic_svc_model.fit(X_train_scaled, y_train)
+                    svc_model.fit(X_train_scaled, y_train)
 
-                    curr_svm_data = calc_results('LSVM', basic_svc_model, X_test_scaled, y_test, curr_data)
+                    curr_svm_data = calc_results('LSVM', svc_model, X_test_scaled, y_test, curr_data)
 
                     # Store Log Reg row level probability errors and preds for confusion matrices and further analysis
                     new_classifications_dict = {
-                        'movie': [movies_list[ii] for ii in test_index],
+                        'movie': [movie_list[kk] for kk in test_index],
                         'model': pooling_model_name,
                         'rep_type': rep_type,
                         'packing_type': packing_type,
                         'pooling_strat': pooling_strat,
                         'cat': cat,
                         'true': y_test.reshape(-1),
-                        'pred': basic_log_reg_model.predict(X_test_scaled_pca)
+                        'pred': basic_model.predict(X_test_scaled_pca)
                     }
-                    probs = basic_log_reg_model.predict_proba(X_test_scaled_pca)
-                    for ii in range(probs.shape[1]):
-                        new_classifications_dict[f'prob_{ii}'] = probs[:, ii].reshape(-1)
+                    probs = basic_model.predict_proba(X_test_scaled_pca)
+                    for kk in range(probs.shape[1]):
+                        new_classifications_dict[f'prob_{kk}'] = probs[:, kk].reshape(-1)
 
                     row_level_classification_list.append(new_classifications_dict)
                     results_metrics.append(curr_svm_data)
@@ -262,39 +279,83 @@ def perform_sem_rep_modelling(df: pd.DataFrame, ratings: npt.ArrayLike, max_iter
 
 
 def main():
+
+    os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+
     df, ratings = get_text_and_ratings()
     tfidf_params = {'min_df': 0.01, 'max_df': 0.9, 'ngram_range': (1, 3), 'strip_accents': 'ascii'}
     perform_baseline_log_reg(df, ratings, md.results_dir, tfidf_params)
 
+
+    ### Reduction of Class Imbalance (Undersampling)
     # Try reduce most frequent class to frequency of second most frequent class in training set only
-    red_cases = [x for x in esr.get_cases(md.pooling_models[:2], md.rep_types, md.packing_types, md.pooling_strategies[:1])]
-    perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='reduction', cases=red_cases, fast_run=False, strem_rep_type=False)
+    # Balancing class weights in both the classifier and the F1 macro metric means this has no impact
+    # red_cases = [x for x in esr.get_cases(md.pooling_models[:2], md.rep_types, md.packing_types, md.pooling_strategies[:1])]
+    # perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='reduction', cases=red_cases, fast_run=False)
 
-    # Show model performance:
-    model_cases = [x for x in esr.get_cases(md.pooling_models, md.rep_types, md.packing_types, md.pooling_strategies[:1])]
-    perform_sem_rep_modelling(df, ratings, 1000, hypothesis='models', cases=model_cases, fast_run=True, strem_rep_type=True)
 
-    # Combine Emotion
-    emotion_models = [md.pooling_models[ii] for ii in [0, 2, 3]]
-    emotion_cases = [x for x in esr.get_cases(emotion_models, md.rep_types, md.packing_types, md.pooling_strategies[:1])]
-    perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='emotion', cases=emotion_cases, fast_run=False, strem_rep_type=True)
+    ### All Models Performance
+    model_cases = [x for x in esr.get_cases(md.pooling_models, md.rep_types, md.packing_types, md.pooling_strategies[:2])]
+    perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='models', cases=model_cases, fast_run=True)
 
-    # Ablative study on CLS Layers and min vs max concat pooling
-    concat_cases = [x for x in esr.get_cases(emotion_models, md.rep_types, md.packing_types, md.pooling_strategies[:1])]
-    perform_sem_rep_modelling(df, ratings, 1000, hypothesis='CLS-1', cases=concat_cases, fast_run=True, strem_rep_type=True, concat_pooling='1-mean-max')
-    perform_sem_rep_modelling(df, ratings, 1000, hypothesis='CLS-2', cases=concat_cases, fast_run=True, strem_rep_type=True, concat_pooling='2-mean-max')
-    perform_sem_rep_modelling(df, ratings, 1000, hypothesis='CLS-Mean', cases=concat_cases, fast_run=True, strem_rep_type=True, concat_pooling='mean-1-2')
-    perform_sem_rep_modelling(df, ratings, 1000, hypothesis='CLS-Max', cases=concat_cases, fast_run=True, strem_rep_type=True, concat_pooling='max-1-2')
+    wide_cases = [x for x in esr.get_cases(md.pooling_models[-1:], md.rep_types, ['chunks'], md.pooling_strategies[-1:])]
+    perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='wide', cases=wide_cases, fast_run=True)
 
-    # Show best performance:
-    best_cases = [x for x in esr.get_cases(md.pooling_models[:2], md.rep_types, md.packing_types, md.pooling_strategies[:1])]
-    perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='best-emotion', cases=best_cases, fast_run=False, strem_rep_type=False, concat_pooling='2-mean-max')
+    top_models = md.pooling_models[:3]
+    first_pass_best_cases_df = md.agg_and_sort_cv_results('models', final_groupby='model', agg_groupby=['model', 'rep_type', 'packing_type', 'pooling_strat'], top_n=1)
+    first_pass_best_cases = list(first_pass_best_cases_df[['model', 'rep_type', 'packing_type', 'pooling_strat']].itertuples(index=False, name=None))
 
-    # Potential Ablative Studies
-    # - PCA vs none
-    # - FP32
 
-    # TODO: Full rating categorisation to compare with Shafaei?
+    ### PCA testing
+    pca_df_list = []
+    for setting in [32, 64, 0.8, 0.95, 'original', None]:
+        # All -> no PCA, None -> use all components in PCA, confusing but this is partly how the n_components setting works
+        curr_df = perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis=f'pca-{str(setting)}', cases=first_pass_best_cases, fast_run=True, pca_params={'n_components': setting})[0]
+        curr_df['pca_setting'] = str(setting)
+        pca_df_list.append(curr_df)
+
+    pca_df = pd.concat(pca_df_list) \
+        .groupby(['model', 'cat', 'rep_type', 'packing_type', 'pca_setting', 'pooling_strat']) \
+        .agg({'f1_macro': 'mean', 'acc': 'mean'}) \
+        .reset_index() 
+
+    pca_df.to_parquet(f'{md.sem_rep_metrics_fp}pca.parquet')
+
+
+    ### Ablative study on CLS Layers and min vs max concat pooling
+    first_best_cases_best_models = [x for x in first_pass_best_cases if x[0] in md.pooling_models[:3]]
+
+    perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='CLS-1', cases=first_best_cases_best_models, fast_run=True, concat_pooling='1-mean-max')
+    perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='CLS-2', cases=first_best_cases_best_models, fast_run=True, concat_pooling='2-mean-max')
+    perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='CLS-Mean', cases=first_best_cases_best_models, fast_run=True, concat_pooling='mean-1-2')
+    perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='CLS-Max', cases=first_best_cases_best_models, fast_run=True, concat_pooling='max-1-2')
+
+
+    ### Emotion:
+    all_cases = [x for x in esr.get_cases(top_models, md.rep_types, md.packing_types, md.pooling_strategies[:2])]
+    perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='emotion', cases=all_cases, fast_run=True, pca_params={'n_components': None})
+
+    groupby_cols = ['model', 'cat', 'rep_type', 'packing_type', 'pooling_strat', 'classifier']
+    best_cases_df = md.agg_and_sort_cv_results('models', final_groupby=['cat', 'rep_type'], agg_groupby=groupby_cols, top_n=3)
+    best_cases_top_3 = list(best_cases_df[['model', 'rep_type', 'packing_type', 'pooling_strat']].itertuples(index=False, name=None))
+
+    best_df_list = []
+    for ii in range(5):
+        best_df_list.append(perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis=f'best-{ii}', cases=best_cases_top_3, fast_run=False, cats_lists=[[x] for x in best_cases_df.cat.values])[0])
+
+    best_df = pd.concat(best_df_list)
+    best_df.to_parquet(md.sem_rep_metrics_fp + 'best.parquet')
+
+
+    ### Variance Testing
+    groupby_cols = ['model', 'cat', 'rep_type', 'packing_type', 'pooling_strat', 'classifier']
+
+    best_cases_df = md.agg_and_sort_cv_results('best', final_groupby='cat', agg_groupby=groupby_cols, top_n=1)
+    best_cases = list(best_cases_df[['model', 'rep_type', 'packing_type', 'pooling_strat']].itertuples(index=False, name=None))
+    cats_lists = [[x] for x in best_cases_df.cat.values]
+
+    for ii in range(30):
+        perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis=f'variance-{ii}', cases=best_cases, fast_run=True, cats_lists=cats_lists)
 
 
 if __name__ == "__main__":

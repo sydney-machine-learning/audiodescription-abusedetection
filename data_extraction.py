@@ -8,16 +8,7 @@ from typing import List, Tuple
 
 from bs4 import BeautifulSoup
 
-from transformers import (
-    AutoTokenizer
-)
-
-from evaluate import load
-
 import kaggle
-from nltk import download
-download('stopwords')
-download('punkt_tab')
 
 import utils
 

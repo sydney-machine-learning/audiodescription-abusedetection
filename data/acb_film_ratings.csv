@@ -49,7 +49,8 @@ King Richard,https://www.classification.gov.au/titles/king-richard,moderate,mode
 Kung Fu Panda 4,https://www.classification.gov.au/titles/kung-fu-panda-4-0,mild,mild,mild,none,none,none,"Mild fantasy themes, animated violence and occasional coarse language"
 Licorice Pizza,https://www.classification.gov.au/titles/licorice-pizza,mild,very mild,moderate,mild,none,mild,Coarse language and sexual references
 Little Women,https://www.classification.gov.au/titles/little-women-7,very mild,very mild,none,none,none,none,Very mild themes
-Maestro,https://www.classification.gov.au/titles/maestro-4,mild,very mild,moderate,moderate,none,mild,"Coarse language and drug use"
+Maestro,https://www.classification.gov.au/titles/maestro-4,mild,very mild,moderate,moderate,none,mild,"Coarse language and drug use
+"
 Mank,https://www.classification.gov.au/titles/mank,moderate,very mild,moderate,none,none,mild,Mature themes and coarse language
 Marriage Story,https://www.classification.gov.au/titles/marriage-story,moderate,none,moderate,mild,none,moderate,"Mature themes, coarse language and sexual references"
 Minions The Rise of Gru,https://www.classification.gov.au/titles/minions-rise-gru,mild,mild,none,none,very mild,none,Mild themes and animated violence
@@ -65,9 +66,12 @@ Promising Young Woman,https://www.classification.gov.au/titles/promising-young-w
 Puss In Boots The Last Wish,https://www.classification.gov.au/titles/puss-boots-last-wish-0,mild,mild,mild,none,none,none,"Mild themes, animated violence and coarse language, some scenes may scare young children"
 Shang-Chi and The Legend of the Ten Rings,https://www.classification.gov.au/titles/shang-chi-and-legend-ten-rings,moderate,moderate,mild,very mild,none,none,Fantasy themes and violence
 Sing 2,https://www.classification.gov.au/titles/sing-2-0,mild,mild,very mild,none,none,very mild,Some scenes may scare young children
-Sonic the Hedgehog,https://www.classification.gov.au/titles/sonic-hedgehog-6,mild,mild,very mild,none,none,none,"Comedic action violence"
-Sound of Metal,https://www.classification.gov.au/titles/sound-metal,moderate,none,moderate,mild,mild,mild,"Mature themes and coarse language"
-Spider-Man Across the Spider-Verse,https://www.classification.gov.au/titles/spider-man-across-spider-verse,mild,mild,mild,none,none,none,"Mild science fiction themes, animated violence and coarse language"
+Sonic the Hedgehog,https://www.classification.gov.au/titles/sonic-hedgehog-6,mild,mild,very mild,none,none,none,"Comedic action violence
+"
+Sound of Metal,https://www.classification.gov.au/titles/sound-metal,moderate,none,moderate,mild,mild,mild,"Mature themes and coarse language
+"
+Spider-Man Across the Spider-Verse,https://www.classification.gov.au/titles/spider-man-across-spider-verse,mild,mild,mild,none,none,none,"Mild science fiction themes, animated violence and coarse language
+"
 Spider-Man Far From Home,https://www.classification.gov.au/titles/spider-man-far-home,moderate,moderate,mild,none,none,none,Action violence
 Spider-Man No Way Home,https://www.classification.gov.au/titles/spider-man-no-way-home,mild,moderate,mild,none,none,very mild,Action violence
 Star Wars Episode IX - The Rise of Skywalker,https://www.classification.gov.au/titles/star-wars-episode-ix-rise-skywalker,moderate,moderate,very mild,none,none,none,Science fiction violence
@@ -77,7 +81,8 @@ The Banshees of Inisherin,https://www.classification.gov.au/titles/banshees-inis
 The Batman,https://www.classification.gov.au/titles/batman-7,moderate,moderate,moderate,mild,none,mild,"Sustained threat, violence and coarse language"
 The Beekeeper,https://www.classification.gov.au/titles/beekeeper-2,moderate,strong,strong,moderate,none,mild,Strong action violence and coarse language
 The Croods A New Age,https://www.classification.gov.au/titles/croods-new-age-0,mild,mild,very mild,none,none,none,Mild themes and animated violence
-The Departed,https://www.classification.gov.au/titles/departed-1,,,,,,,"Strong violence and coarse language, Sexual references"
+The Departed,https://www.classification.gov.au/titles/departed-1,,,,,,,"Strong violence and coarse language, Sexual references
+"
 The Fabelmans,https://www.classification.gov.au/titles/fabelmans,moderate,moderate,moderate,mild,none,none,Mature themes and coarse language
 The Fall Guy,https://www.classification.gov.au/titles/fall-guy-14,mild,moderate,moderate,mild,none,none,Action violence and coarse language
 The Father,https://www.classification.gov.au/titles/father-2,moderate,mild,moderate,none,none,none,Mature themes and coarse language
@@ -93,7 +98,8 @@ The Trial of the Chicago 7,https://www.classification.gov.au/titles/trial-chicag
 The Zone of Interest,https://www.classification.gov.au/titles/zone-interest,moderate,moderate,very mild,none,none,very mild,Holocaust themes
 Thor Love and Thunder,https://www.classification.gov.au/titles/thor-love-and-thunder,moderate,moderate,mild,none,mild,mild,Fantasy themes and action violence
 Top Gun Maverick,https://www.classification.gov.au/titles/top-gun-maverick,mild,moderate,moderate,none,none,very mild,Violence and coarse language
-Toy Story 4,https://www.classification.gov.au/titles/toy-story-4-0,very mild,very mild,none,none,none,none,"Some scenes may scare very young children"
+Toy Story 4,https://www.classification.gov.au/titles/toy-story-4-0,very mild,very mild,none,none,none,none,"Some scenes may scare very young children
+"
 Venom Let There Be Carnage,https://www.classification.gov.au/titles/venom-let-there-be-carnage,moderate,moderate,moderate,none,none,none,"Science fiction themes, violence and coarse language"
 Vice,https://www.classification.gov.au/titles/vice-0,moderate,moderate,moderate,mild,mild,mild,Mature themes and coarse language
 West Side Story,https://www.classification.gov.au/titles/west-side-story-0,moderate,moderate,mild,mild,none,mild,Violence
@@ -227,7 +233,8 @@ Transformers Age of Extinction,https://www.classification.gov.au/titles/transfor
 X-Men Days Of Future Past,https://www.classification.gov.au/titles/x-men-days-future-past,moderate,moderate,moderate,none,mild,none,"Science fiction themes, violence and infrequent coarse language"
 Despicable Me 2,https://www.classification.gov.au/titles/despicable-me-2-1,very mild,mild,very mild,none,very mild,none,Mild animated violence
 Fast and Furious 6,https://www.classification.gov.au/titles/furious-6,very mild,moderate,moderate,none,mild,mild,Action violence and infrequent coarse language
-Frozen,https://www.classification.gov.au/titles/frozen-1,mild,mild,none,none,none,none,"Some scenes may scare very young children"
+Frozen,https://www.classification.gov.au/titles/frozen-1,mild,mild,none,none,none,none,"Some scenes may scare very young children
+"
 Iron Man 3,https://www.classification.gov.au/titles/iron-man-three-0,mild,moderate,mild,mild,none,mild,Action violence
 Man of Steel,https://www.classification.gov.au/titles/man-steel-0,moderate,moderate,mild,none,very mild,none,Science fiction violence
 Monsters University,https://www.classification.gov.au/titles/monsters-university,very mild,none,very mild,none,none,none,The content is very mild in impact
@@ -307,7 +314,8 @@ Mandy,https://www.classification.gov.au/titles/mandy,strong,strong,moderate,stro
 Margaux,https://www.classification.gov.au/titles/margaux,strong,strong,strong,strong,mild,moderate,"Strong horror violence, coarse language and drug use"
 Mercury Plains,https://www.classification.gov.au/titles/mercury-plains,strong,strong,strong,strong,none,strong,Strong themes and coarse language
 All Of Us Strangers,https://www.classification.gov.au/titles/all-us-strangers,moderate,none,strong,strong,moderate,moderate,Strong drug use and coarse language
-Abominable,https://www.classification.gov.au/titles/abominable,very mild,very mild,none,none,none,none,"Some scenes may scare very young children"
+Abominable,https://www.classification.gov.au/titles/abominable,very mild,very mild,none,none,none,none,"Some scenes may scare very young children
+"
 Cars 3,https://www.classification.gov.au/titles/cars-3-1,very mild,none,very mild,none,none,none,Very mild themes and coarse language
 Apollo 11,https://www.classification.gov.au/titles/apollo-11,very mild,none,very mild,none,none,none,General
 Mary Poppins Returns,https://www.classification.gov.au/titles/mary-poppins-returns,very mild,none,none,none,none,none,A scene of very mild peril
@@ -324,7 +332,6 @@ Brave,https://www.classification.gov.au/titles/brave-0,mild,mild,none,none,very 
 Dragon Rider,https://www.classification.gov.au/titles/dragon-rider-3,mild,mild,very mild,none,none,none,Mild fantasy themes and animated violence
 Duck Duck Goose,https://www.classification.gov.au/titles/duck-duck-goose,mild,mild,mild,none,none,very mild,"Mild animated violence, crude humour and coarse language"
 Dream Horse,https://www.classification.gov.au/titles/dream-horse-0,mild,none,mild,none,none,very mild,Mild themes and coarse language
-Earwig and the Witch,https://www.classification.gov.au/titles/earwig-and-witch,mild,very mild,none,none,none,none,Mild supernatural themes
 Frankenweenie,https://www.classification.gov.au/titles/frankenweenie,mild,none,mild,none,none,none,Scary scenes and infrequent mild coarse language
 Goosebumps,https://www.classification.gov.au/titles/goosebumps,mild,mild,none,none,none,none,Mild scary scenes
 He Named Me Malala,https://www.classification.gov.au/titles/he-named-me-malala-0,mild,mild,none,none,none,none,"Mild themes, some distressing images"
@@ -375,7 +382,6 @@ Descendants 3,https://www.classification.gov.au/titles/descendants-3,mild,mild,v
 Dog Man,https://www.classification.gov.au/titles/dog-man-0,very mild,very mild,very mild,none,none,none,"Very mild themes, animated violence and coarse language"
 East Side Sushi,https://www.classification.gov.au/titles/east-side-sushi,very mild,mild,very mild,none,none,none,Mild violence
 Echo in the Canyon,https://www.classification.gov.au/titles/echo-canyon,very mild,none,mild,mild,none,very mild,Mild coarse language and drug references
-Enchanted Kingdom,https://www.classification.gov.au/titles/enchanted-kingdom,none,none,none,none,none,none,General
 Emma's Chance,https://www.classification.gov.au/titles/emmas-chance,very mild,none,none,none,none,none,Very mild themes
 Ferdinand,https://www.classification.gov.au/titles/ferdinand,very mild,very mild,very mild,none,none,none,Very mild themes and coarse language
 Blair Witch,https://www.classification.gov.au/titles/blair-witch-0,strong,moderate,moderate,mild,none,mild,Strong supernatural themes

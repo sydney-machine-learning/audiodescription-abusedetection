@@ -35,9 +35,32 @@ pooling_models = [
     # 'sentence-transformers/all-MiniLM-L6-v2'  # 5
 ]
 
+abb_pooling_model_names = [
+    'Multilabel',
+    'Emotion',
+    'Offensive',
+    'Twitter Sentiment',
+    'IMDb Sentiment',
+    'Chat Moderation'
+]
+
 rep_types = ['dialogue', 'narration', 'transcript']
 packing_types = ['chunks', 'utterances']
-pooling_strategies = ['lhsCLS', 'lhsCLS-fp32']
+pooling_strategies = ['lhsCLS', 'no-stride', 'lhsCLS-fp32', 'full-window']
+
+
+def apply_cat_order(df: pd.DataFrame) -> pd.DataFrame:
+    df.cat = df.cat.astype('category')
+    df.cat = df.cat.cat.set_categories(full_cat_cols)
+
+    return df.sort_values('cat')
+
+
+def apply_model_order(df: pd.DataFrame) -> pd.DataFrame:
+    df.model = df.model.astype('category')
+    df.model = df.model.cat.set_categories(pooling_models)
+
+    return df.sort_values('model')
 
 
 def convert_col_to_ordinal(series: pd.Series, compact: bool = True) -> pd.Series:
@@ -63,16 +86,23 @@ def convert_col_to_ordinal(series: pd.Series, compact: bool = True) -> pd.Series
     return new_series
 
 
-def agg_and_sort_cv_results(hypothesis: str, top_n: int = 0) -> pd.DataFrame:
+def agg_and_sort_cv_results(hypothesis: str, final_groupby: str = 'cat', agg_groupby: str = None, top_n: int = 0) -> pd.DataFrame:
+
+    metrics = {'f1_macro', 'acc', 'auroc'}
+    if agg_groupby is None:
+        agg_groupby = ['model', 'cat', 'rep_type', 'packing_type', 'pooling_strat', 'classifier']
+
+    df = pd.read_parquet(f'{sem_rep_metrics_fp}{hypothesis}.parquet')
+    metrics_agg = {x: 'mean' for x in metrics.intersection(df.columns)}
 
     df = pd.read_parquet(f'{sem_rep_metrics_fp}{hypothesis}.parquet') \
-        .groupby(['model', 'cat', 'rep_type', 'packing_type', 'classifier']) \
-        .agg({'f1_macro': 'mean', 'acc': 'mean', 'auroc': 'mean'}) \
+        .groupby(agg_groupby) \
+        .agg(metrics_agg) \
         .reset_index() \
         .sort_values(['f1_macro'], ascending=False)
     
     if top_n > 0:
-        df = df.groupby('cat').head(top_n).reset_index(drop=True)
+        df = df.groupby(final_groupby).head(top_n).reset_index(drop=True)
 
     return df
             
@@ -89,11 +119,13 @@ def process_text(text: str, excl_stopwords: bool):
 
 
 def get_ngram_counts(text, n, top_n=10, excl_stopwords: bool = True):
-    
+
     tokens = process_text(text, excl_stopwords)
     ngram_list = list(ngrams(tokens, n))
     ngram_counts = Counter(ngram_list)
-    ngram_df = pd.DataFrame(ngram_counts.most_common(top_n), columns=['Ngram', 'Frequency'])
+    ngram_df = pd.DataFrame.from_dict(ngram_counts, orient='index', columns=['Frequency']).reset_index(names=['Ngram'])
     ngram_df['Ngram'] = ngram_df['Ngram'].apply(lambda x: ' '.join(x))
+    ngram_df['Percentage'] = ngram_df['Frequency'] / ngram_df['Frequency'].sum() * 100
+    ngram_df = ngram_df.sort_values('Percentage', ascending=False).iloc[:top_n]
     
     return ngram_df

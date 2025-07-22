@@ -33,7 +33,7 @@ from typing import List, Tuple
 
 def _extract_sem_rep_for_single_movie(all_segments, pooling_model, pooling_strat, data_collator, device, batch_size=64):
     
-    if 'fp32' in pooling_strat:
+    if 'fp32' in pooling_strat or pooling_model == md.pooling_models[-1]:
         os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
     else:
         torch.set_float32_matmul_precision('medium')
@@ -134,7 +134,7 @@ def _get_chunked_encodings(df: pd.DataFrame, stride: int, tokenizer, max_len: in
         while token_count < total_tokens:
             
             # Use small offset to ensure limits aren't exceeded
-            end = min(len(full_text_tokens), start + tokenizer.model_max_length - 2)
+            end = min(len(full_text_tokens), start + max_len - 2)
             all_segments.append(''.join(full_text_tokens[start:end]))
             start = end - stride
             token_count = end
@@ -196,8 +196,10 @@ def _accumulate_profile_results(prof, cpu_df_list, gpu_df_list):
 
 def get_or_create_movie_sem_reps(df, pooling_model_name, rep_type, packing_type, pooling_strat, device, use_profiler=False):
     
-    enc_max_len = 512
-    stride = 128
+    # Use 2048 tokens with ModernBERT Model
+    chunk_max_len = 512 if pooling_model_name != md.pooling_models[-1] else 2048
+    utterances_max_len = 512 if pooling_model_name != md.pooling_models[-1] else 1024
+    stride = 128 if 'no-stride' not in pooling_strat else 0
     
     # Identify which movies we need to build representations for
     file_group = md.sem_rep_filename.format(movie='', model=pooling_model_name.replace('/', '_'), rep_type=rep_type, packing_type=packing_type, pooling_strat=pooling_strat)
@@ -217,7 +219,7 @@ def get_or_create_movie_sem_reps(df, pooling_model_name, rep_type, packing_type,
     pooling_model.to(device)
     pooling_model.eval()
     # padding_args = {'pad_to_multiple_of': 16} if pooling_model_name in md.pooling_models[:-1] else {'padding': 'max_length'}
-    data_collator = DataCollatorWithPadding(tokenizer=tokenizer, return_tensors="pt", padding=True) # **padding_args
+    data_collator = DataCollatorWithPadding(tokenizer=tokenizer, return_tensors="pt", padding='longest') # **padding_args
     
     batch_size = 32 if packing_type == 'chunks' else 64
     # batch_size = 64 if rep_type == 'dialogue' else 32
@@ -228,11 +230,11 @@ def get_or_create_movie_sem_reps(df, pooling_model_name, rep_type, packing_type,
             filtered_df = filtered_df[filtered_df.type.eq(rep_type)]
             
         if packing_type == 'chunks':
-            all_enc, movie_indices = _get_chunked_encodings(filtered_df, stride, tokenizer, enc_max_len)
+            all_enc, movie_indices = _get_chunked_encodings(filtered_df, stride, tokenizer, chunk_max_len)
 
         else:
             filtered_df = _agg_narrator_seg(filtered_df).sort_values(['movie', 'start_time'])
-            all_enc, movie_indices = _get_utterance_encodings(filtered_df, tokenizer, enc_max_len, label_speech_type=False)
+            all_enc, movie_indices = _get_utterance_encodings(filtered_df, tokenizer, utterances_max_len, label_speech_type=False)
 
         if use_profiler:
             gpu_df_list = []
@@ -278,16 +280,11 @@ def get_or_create_movie_sem_reps(df, pooling_model_name, rep_type, packing_type,
 
     rep_list = []
     
-    sorted_films = os.listdir(md.sem_rep_dir)
-    sorted_films.sort()
-    rep_list_movies = []
-    for movie_filename in sorted_films:
-        if movie_filename.endswith(file_group):
-            with open(os.path.join(md.sem_rep_dir, movie_filename), 'rb') as fileobj:
-                rep_list.append(pickle.load(fileobj))
-                rep_list_movies.append(movie_filename.removesuffix(file_group))
+    for movie in df.movie.unique():
+        with open(os.path.join(md.sem_rep_dir, f'{movie}{file_group}'), 'rb') as fileobj:
+            rep_list.append(pickle.load(fileobj))
             
-    return rep_list, rep_list_movies
+    return rep_list
 
 
 def get_cases(models: List[str], rep_types: List[str], packing_types: List[str], pooling_strats: List[str]):
@@ -297,7 +294,10 @@ def get_cases(models: List[str], rep_types: List[str], packing_types: List[str],
     for pooling_model_name in models:
         for rep_type in rep_types:
             for packing_type in packing_types:
-                for pooling_strat in pooling_strats: 
+                for pooling_strat in pooling_strats:
+                    # Experimenting with stride is only relevant to chunked packing
+                    if 'stride' in pooling_strat and packing_type != 'chunks':
+                        continue
                     cases.append((pooling_model_name, rep_type, packing_type, pooling_strat))
                                  
     return cases
@@ -341,7 +341,7 @@ def main(models: List[str], rep_types: List[str], packing_types: List[str], pool
 
     for ii, (pooling_model_name, rep_type, packing_type, pooling_strat) in enumerate(cases):
         # clear_sem_reps_for_cat(pooling_model_name, rep_type, packing_type, pooling_strat, n=20)
-        logging.info(f'{ii} / {len(cases)}, Curr Model: {pooling_model_name}, {rep_type}, {packing_type}, {pooling_strat}')
+        logging.info(f'{ii + 1} / {len(cases)}, Curr Model: {pooling_model_name}, {rep_type}, {packing_type}, {pooling_strat}')
         try:
             get_or_create_movie_sem_reps(df, pooling_model_name, rep_type, packing_type, pooling_strat, device, use_profiler=use_profiler)
         except Exception as error:
@@ -358,5 +358,6 @@ def main(models: List[str], rep_types: List[str], packing_types: List[str], pool
                 
                 
 if __name__ == "__main__":
-    main(md.pooling_models, md.rep_types, ['chunks'], md.pooling_strategies)
-    main(md.pooling_models, md.rep_types, md.packing_types, md.pooling_strategies[:1])
+    # main(md.pooling_models, md.rep_types, ['chunks'], md.pooling_strategies[:-1])
+    main(md.pooling_models, md.rep_types, md.packing_types, md.pooling_strategies[:2])
+    # main(md.pooling_models[-1:], md.rep_types, ['chunks'], md.pooling_strategies[-1:])
