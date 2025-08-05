@@ -195,7 +195,7 @@ def calc_wer(movie_name: str):
     return wer_score, cer_score      
 
 
-# TODO: reference appropriately
+# The following function was created with assistance from ChatGPT
 def visualise_wer_differences(candidate_txt: str, reference_txt: str):
     ref_words = reference_txt.split()
     hyp_words = candidate_txt.split()
