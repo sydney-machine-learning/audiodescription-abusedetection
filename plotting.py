@@ -11,6 +11,7 @@ sns.set_palette('colorblind')
 
 # sns.set_style('whitegrid')
 
+# The following settings were identified with assistance from ChatGPT, then tweaked based on experimentation
 plt.rcParams.update({
     'figure.figsize': (3.5, 2.5),
     'font.size': 8,

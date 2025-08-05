@@ -92,10 +92,10 @@ def agg_and_sort_cv_results(hypothesis: str, final_groupby: str = 'cat', agg_gro
     if agg_groupby is None:
         agg_groupby = ['model', 'cat', 'rep_type', 'packing_type', 'pooling_strat', 'classifier']
 
-    df = pd.read_parquet(f'{sem_rep_metrics_fp}{hypothesis}.parquet')
-    metrics_agg = {x: 'mean' for x in metrics.intersection(df.columns)}
+    raw_df = pd.read_parquet(f'{sem_rep_metrics_fp}{hypothesis}.parquet')
+    metrics_agg = {x: 'mean' for x in metrics.intersection(raw_df.columns)}
 
-    df = pd.read_parquet(f'{sem_rep_metrics_fp}{hypothesis}.parquet') \
+    df = raw_df.copy() \
         .groupby(agg_groupby) \
         .agg(metrics_agg) \
         .reset_index() \

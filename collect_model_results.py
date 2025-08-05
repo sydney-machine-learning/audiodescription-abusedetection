@@ -37,10 +37,29 @@ import numpy.typing as npt
 
 n_folds = 5
 seed = 42
+
 # jobs to 1 for debugging and -1 for performance
 n_jobs = -1
 
-def get_text_and_ratings() -> Tuple[pd.DataFrame, npt.ArrayLike]:
+
+def get_text_and_ratings(compact: bool = True) -> Tuple[pd.DataFrame, npt.ArrayLike]:
+    df = pd.read_parquet(da.cleaned_dataset_fp).sort_values(['movie', 'start_time'])
+
+    for col in md.full_cat_cols:
+        df[col] = md.convert_col_to_ordinal(df[col], compact=compact)
+
+    df['rating'] = df[md.full_cat_cols].max(axis=1)
+        
+    ratings = df[md.full_cat_cols + ['movie']].drop_duplicates().drop(columns=['movie']).values
+
+    if not compact:
+        # None category doesn't correspond to classification, so remove it
+        ratings[ratings == 0] = 1
+
+    return df, ratings
+
+
+def get_text_and_classifications() -> Tuple[pd.DataFrame, npt.ArrayLike]:
     df = pd.read_parquet(da.cleaned_dataset_fp).sort_values(['movie', 'start_time'])
 
     for col in md.full_cat_cols:
@@ -115,6 +134,7 @@ def calc_results(model_name: str, model, X_test, y_true: npt.ArrayLike, row: Dic
     curr_row['pca'] = has_pca
     curr_row['acc'] = accuracy_score(y_true.reshape(-1), y_pred.reshape(-1)) * 100
     curr_row['f1_macro'] = f1_score(y_true.reshape(-1), y_pred.reshape(-1), average='macro') * 100
+    curr_row['f1_weighted'] = f1_score(y_true.reshape(-1), y_pred.reshape(-1), average='weighted') * 100
 
     if calc_y_prob:
         y_prob = model.predict_proba(X_test)
@@ -208,7 +228,6 @@ def perform_sem_rep_modelling(df: pd.DataFrame, ratings: npt.ArrayLike, max_iter
             rep_list = [torch.cat([x.reshape(-1), y.reshape(-1)], dim=0) for x, y in zip(rep_list, emotion_rep_list)]
             emote_X = torch.stack([x.reshape(-1) for x in rep_list]).cpu().numpy().reshape(len(rep_list), -1)
 
-        y = np.array(ratings)
         case_cats = md.full_cat_cols if cats_lists is None else cats_lists[ii]
 
         for cat in case_cats:
@@ -217,7 +236,7 @@ def perform_sem_rep_modelling(df: pd.DataFrame, ratings: npt.ArrayLike, max_iter
             # Check whether category benefits from emotion or not
             X = emote_X.copy() if emote_cases[cat] else no_emote_X.copy()
             
-            y = np.array(ratings)[:, cat_idx]
+            y = np.array(ratings)[:, cat_idx] if 'overall' not in hypothesis else np.array(ratings).max(axis=1)
             for train_index, test_index in k_fold.split(X, y):
                 X_train, X_test, y_train, y_test = X[train_index], X[test_index], y[train_index], y[test_index]
 
@@ -289,7 +308,7 @@ def main():
 
     ### Reduction of Class Imbalance (Undersampling)
     # Try reduce most frequent class to frequency of second most frequent class in training set only
-    # Balancing class weights in both the classifier and the F1 macro metric means this has no impact
+    # Balancing class weights in both the classifier and the Macro F1 metric means this has no impact
     # red_cases = [x for x in esr.get_cases(md.pooling_models[:2], md.rep_types, md.packing_types, md.pooling_strategies[:1])]
     # perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='reduction', cases=red_cases, fast_run=False)
 
@@ -356,6 +375,13 @@ def main():
 
     for ii in range(30):
         perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis=f'variance-{ii}', cases=best_cases, fast_run=True, cats_lists=cats_lists)
+
+    
+    # Overall Rating Prediction
+    # df, ratings = get_text_and_ratings(compact=False)
+    overall_dialoge_cases = esr.get_cases(md.pooling_models[:1], ['dialogue'], md.packing_types, md.pooling_strategies[:1])
+    perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='overall-rating', cases=[(md.pooling_models[0], 'transcript', 'chunks', 'no-stride')], fast_run=True)
+    perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='overall-rating-dialogue', cases=overall_dialoge_cases, fast_run=True)
 
 
 if __name__ == "__main__":
