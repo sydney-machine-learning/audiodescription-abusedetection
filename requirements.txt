@@ -73,6 +73,7 @@ jupyterlab==4.2.5
 jupyterlab_pygments==0.3.0
 jupyterlab_server==2.27.3
 jupyterlab_widgets==3.0.13
+kaggle==1.7.4.5
 kiwisolver==1.4.8
 lightning==2.5.0.post0
 lightning-utilities==0.11.9
@@ -146,6 +147,7 @@ Pygments==2.18.0
 pyparsing==3.2.1
 python-dateutil==2.9.0.post0
 python-json-logger==2.0.7
+python-slugify==8.0.4
 pytorch-lightning==2.5.0.post0
 pytorch-metric-learning==2.8.1
 pytz==2024.2
