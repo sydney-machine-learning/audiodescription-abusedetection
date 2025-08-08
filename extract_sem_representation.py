@@ -18,7 +18,6 @@ from transformers import (
     DataCollatorWithPadding
 )
 
-# TODO: revert space removal for consistency (or apply everywhere?)
 import gc
 import pickle
 import os

@@ -12,13 +12,21 @@ import torch
 device = torch.device('cuda')
 
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score, classification_report, f1_score, confusion_matrix, roc_auc_score, ConfusionMatrixDisplay
+from sklearn.metrics import accuracy_score, classification_report, f1_score, confusion_matrix, roc_auc_score, ConfusionMatrixDisplay, make_scorer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import LinearSVC
 from sklearn.decomposition import PCA
-from sklearn.utils.class_weight import compute_sample_weight
+
+from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
+from skopt import BayesSearchCV
+from skopt.space import Categorical, Integer
+
+import xgboost as xgb
 
 from scipy import stats
 
@@ -34,6 +42,9 @@ import os
 
 from typing import Tuple, Dict, List
 import numpy.typing as npt
+
+import warnings
+# warnings.filterwarnings('ignore', message='The objective has been evaluated at', module='skopt.optimizer.optimizer')
 
 n_folds = 5
 seed = 42
@@ -175,6 +186,30 @@ def get_mode_filter_indices(y_train: npt.ArrayLike) -> npt.ArrayLike:
     return indices_excl_excess_mode
 
 
+def fit_extra_classifiers(X_train, y_train, X_test, y_test, metadata) -> pd.DataFrame:
+    classifiers = {
+        # 'AdaBoost': (AdaBoostClassifier(), {'n_estimators': Integer(10, 500)}),
+        'Random Forest': (RandomForestClassifier(), {'max_depth': Integer(3, 20), 'n_estimators': Integer(10, 500)}),
+        'XGBoost': (xgb.XGBClassifier(), {'n_estimators': Integer(50, 500), 'max_depth': Integer(3, 12)})
+    }
+    results = []
+
+    val_set_cv = StratifiedKFold(n_splits=5)
+
+    scorer = make_scorer(f1_score, average='macro')
+    for classifier_name, (model, params) in classifiers.items():
+        new_row = {key: val for key, val in metadata.items()}
+        grid = BayesSearchCV(model, search_spaces=params, scoring=scorer, cv=val_set_cv, n_jobs=n_jobs, n_iter=10)
+        grid.fit(X_train, y_train)
+        classifier_best_model = grid.best_estimator_
+        y_pred = classifier_best_model.predict(X_test)
+        new_row['classifier'] = classifier_name
+        new_row['f1_macro'] = f1_score(y_test, y_pred, average='macro') * 100
+        results.append(new_row)
+
+    return results
+
+
 def perform_sem_rep_modelling(df: pd.DataFrame, ratings: npt.ArrayLike, max_iter: int, hypothesis: str, cases: Tuple[str, str, str, str], fast_run: bool, concat_pooling=None, pca_params=None, emote_cases: Dict[str, bool] = None, cats_lists: List[List[str]] = None):
 
     sem_rem_metrics_fp = f'{md.sem_rep_metrics_fp}{hypothesis}.parquet'
@@ -263,6 +298,9 @@ def perform_sem_rep_modelling(df: pd.DataFrame, ratings: npt.ArrayLike, max_iter
                 basic_model.fit(X_train_scaled_pca, y_train)
                 curr_pca_log_data = calc_results('Log Reg', basic_model, X_test_scaled_pca, y_test, curr_data, calc_y_prob=True, has_pca=use_pca)
                 results_metrics.append(curr_pca_log_data)
+
+                if 'classifier' in hypothesis:
+                    results_metrics.extend(fit_extra_classifiers(X_train_scaled_pca, y_train, X_test_scaled_pca, y_test, curr_data))
 
                 if not fast_run:
                     svc_model.fit(X_train_scaled, y_train)
@@ -382,6 +420,10 @@ def main():
     overall_dialoge_cases = esr.get_cases(md.pooling_models[:1], ['dialogue'], md.packing_types, md.pooling_strategies[:1])
     perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='overall-rating', cases=[(md.pooling_models[0], 'transcript', 'chunks', 'no-stride')], fast_run=True)
     perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis='overall-rating-dialogue', cases=overall_dialoge_cases, fast_run=True)
+
+    # Classifier Ablative Study
+    perform_sem_rep_modelling(df, ratings, int(1e5), hypothesis=f'classifier', cases=best_cases, fast_run=True, cats_lists=cats_lists, pca_params={'n_components': 0.99})
+
 
 
 if __name__ == "__main__":
