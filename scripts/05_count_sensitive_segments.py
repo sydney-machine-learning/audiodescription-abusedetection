@@ -31,7 +31,7 @@ import pickle
 import os
 from tqdm import tqdm
 
-import data_extraction as da
+import src.data_extraction as da
 import modelling as md
 import utils
 

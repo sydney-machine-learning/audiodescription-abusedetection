@@ -5,8 +5,8 @@ import logging
 import os
 import re
 
-import utils
-import data_extraction as da
+from . import utils
+from . import data_extraction as da
 
 import silero_vad
 
@@ -24,6 +24,7 @@ from evaluate import load
 
 import difflib
 from termcolor import colored
+from tqdm import tqdm
 
 from typing import Dict
    
@@ -116,12 +117,7 @@ def transcribe_segments(transcript_fp: str, seg_df_path: str, wav_filepath: str,
     seg_start_arr, seg_end_arr = narrator_df['start_frame'].values, narrator_df['end_frame'].values
 
     segment_list = []
-    
-    for ii in range(len(seg_start_arr)):
-        # TODO: replace with tdqm
-        if ii % 50 == 0:
-            logging.info(f'Segment: {ii + 1} / {len(seg_start_arr)}')
-        
+    for ii in tqdm(range(len(seg_start_arr)), desc="Transcribing segments"):
         result = {'text': ''}
         segment = audio[seg_start_arr[ii]: seg_end_arr[ii]]
         raw_transcription = model.transcribe(segment, language='en', **whisper_config)
@@ -180,11 +176,11 @@ def _calc_pyannote_cosine_sim(narrator_embed, embedding_model, start, end, wav_f
 
 def calc_wer(movie_name: str):
 
-    with open(os.path.join(da.transcription_dir, 'manual', f'{movie_name}.txt')) as fileobj:
+    with open(os.path.join(da.transcript_dir, 'manual', f'{movie_name}.txt')) as fileobj:
         raw_txt = fileobj.read()
     ref_txt = re.sub('[\.,"\?!:]', '', raw_txt).lower().replace('-', ' ').replace('\n', ' ')
 
-    trans_df = pd.read_parquet(os.path.join(da.transcription_dir, da.transcript_df_fp.format(movie_name=movie_name)))
+    trans_df = pd.read_parquet(os.path.join(da.transcript_dir, da.transcript_df_fp.format(movie_name=movie_name)))
     trans_df = trans_df[trans_df['text'].ne(' Thank you.')]
     trans_txt = ''.join(trans_df.text.str.replace('[\.,"\?!]', '', regex=True)).lower().replace('-', ' ')
     

@@ -19,3 +19,6 @@ manual_transcript_standardisation.ipynb
 *.ckpt
 
 .vscode/*
+.github/*
+
+src/AudioDescription_AbuseDetection.egg-info/*

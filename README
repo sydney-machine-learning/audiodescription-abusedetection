@@ -1,0 +1,90 @@
+# LLMs for Audio Description Based Evaluation of Content Severity in Films
+
+## Abstract
+Technological advances such as the internet have caused an explosive of access to an enormous volume of movies from all around the globe. Automatically identifying different types and intensity levels of sensitive content is important to ensure the safe experiences of users of all ages. We extract representations of 550 English language films from subtitles and audio descriptions using pretrained LLMs such as RoBERTa to classify the document level ordinal severity of content across six different sensitivity categories: themes, violence, language, drug use, nudity and sex. We experiment with pooling and document partitioning strategies to provide the best document-level classification when SVMs and Logistic Regression is applied to the context embeddings. Adding audio descriptions to subtitles improved absolute macro F1 by 1.9-5.4 across the categories, demonstrating that most of the textual markers of sensitive content are included in subtitles and audio descriptions are a more computationally intensive dataset than they are worth for document-level classification. However, by attempting weak localisation of sensitive content we saw significant changes in rates of sensitive content detection by including audio descriptions. RoBERTa models pretrained on offensive tweet detection achieved state of the art classification results in four categories, affirming the similarity of social media content moderation to film classification, enabling further redeployment of models and dataset.
+
+
+## Data
+The post-processed data is available on Kaggle [here](https://www.kaggle.com/datasets/nytes1/subtitles-and-ads-of-550-films-with-acb-ratings).
+
+### Australian Classification Board (ACB) Ratings
+A 7 point ordinal rating of severity across six content categories: themes, violence, language, drug use, nudity and sex provided by the Australian government for films since 2013. The tools required to scrape this information is included in this repository. 
+
+### AudioVault Audio Descriptions
+AudioVault is a community driven organisation, with significant resource limitations, which provides MP3 files from films which include additional narration for visually impaired people (known as audio descriptions). Speech-to-text (STT) models were required to prepare the data for LLM usage. We can make the original audio files available to reduce burden on AV.
+
+### OpenSubtitle Text Files
+Crowdsourced subtitles were used for the films to asess the quality of audio description transcriptions and their additional predictive power, compared to dialogue.  
+
+__Data Contact__
+
+* **Raine Bianchini <raine.bianchini@gmail.com>** - Contact for queries regarding data
+
+## Getting Started
+# TODO: add run time statistics to every step
+### Preprocessing (Not Required If Using Kaggle Dataset)
+# TODO: mention Kaggle Config, other downloads etc
+1) a) "01a_stt_pipeline.py" \[Required\] - extracts the transcriptions of each of the MP3 files. It creates artifacts for the voice activity detection (VAD), diarization (who speaks when) and final transcription. OOM error on the GPU can occur, so the script is setup to store progress as neatly as possible. The STT architecture was built using manually transcribed scripts to experiment with WER scores and the hyperparameter sweep is available in "diarization_pipeline_evaluation.ipynb".
+
+b) "01b_subtitle_wer_check.py" \[Optional\] - extractions transcriptions of dialogue components of film (not narration sections) to assess similarity with the subtitles, to make sure subtitles are of high quality and for the same film as the audio description. The results are visualised in "subtitles_quality_visualisation.ipynb".
+
+c) "01c_scrape_film_information.ipynb" \[Optional\] - scrapes available AudioVault files and attempts to find corresponding ACB rating to ensure only films with ratings and desired metadata are downloaded.
+
+2) "02_data_preparation.ipynb" \[Required\] - combines all available audio descriptions, subtitles and ratings datasets into one (which was then uploaded to Kaggle) and performs basic EDA to assess quality of datasets, alignment, class imbalances, hallucination rates and other visualisations for the paper.
+
+3) "03_extract_sem_representations.py" - extracts the fixed vector embeddings for each film, model, packing strategy and pooling strategy combination. Narrowing combinations to higher performing models can significantly speed up processing time.
+
+### Primary Study
+
+4) "04_collect_model_results.py" - fits models on each set of semantic representations using a variety of strategies and stores performance and in some cases prediction results. Results are later visualised in "model_architecture_exploration.ipynb"
+
+5) "05_count_sensitive_segments.py" - attempts weak localisation of sensitive segments for best model configurations
+
+
+
+### Requirements
+
+A step by step series of examples that tell you how to get a development/analysis env running
+
+Say what the step will be
+
+```
+Give the example
+```
+
+And repeat
+
+```
+until finished
+```
+
+End with an example of getting some data out of the system or using. It is also worth listing what the requirements are.
+
+## Time Required For Processing
+A warning to all users hoping to recreate results on a single GPU. This project was completed using a Nvidia GeForce RTX 4060 Laptop GPU, 32Gb of RAM and a 13th Gen Intel(R) Core(TM) i9-13905H, on Ubuntu.
+
+## Publications
+
+archive preprint reference
+
+
+## Collaboration
+
+Details regarding how to contribute. Coding style conventions, use of tests, etc.
+
+## Notes
+
+Additional notes / precatuions / etc. to make users aware of.
+
+## Authors
+
+* **Raine Bianchini** - *Initial work* - [ey4got](https://github.com/eye4got); raine.bianchini@gmail.com
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+
+## Acknowledgments
+
+* Dr. Rohitash Chandra
+* This README template was taken from PurpleBooth's [Template](https://gist.github.com/PurpleBooth/109311bb0361f32d87a2) on 2025-07-19

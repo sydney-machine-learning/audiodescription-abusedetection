@@ -1,36 +1,33 @@
 import logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(asctime)s - %(message)s')
 
-import pandas as pd
-
-import os
-
 pyannote_model = 'pyannote/speaker-diarization-3.1'
 embedding_model = "pyannote/embedding" # speechbrain/spkrec-ecapa-voxceleb
 
 import torch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-import data_extraction as da
-import stt
-import utils
+import audiodescription_abusedetection.data_extraction as da
+import audiodescription_abusedetection.stt as stt
+import audiodescription_abusedetection.utils as utils
 
+import os
 import gc
-import psutil
 import warnings
 warnings.filterwarnings("ignore")
 
-logging.getLogger("pyannote").setLevel(logging.WARNING)
-logging.getLogger("pytorch").setLevel(logging.WARNING)
-warnings.filterwarnings("ignore", module="pytorch_lightning")
+logging.getLogger("pyannote").setLevel(logging.ERROR)
+logging.getLogger("speechbrain").setLevel(logging.ERROR)
+logging.getLogger("pytorch").setLevel(logging.ERROR)
+logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
 
 # CONFIG PARAMS
-use_vad = True
-narr_cosine_sim_lim = 0.14
-min_seg_sec = 0
+use_vad = True # bool to use silero voice activity detection
+narr_cosine_sim_lim = 0.14 # minimum cosine similarity for narration segments
+min_seg_sec = 0 # minimum segment duration in seconds
 
 whisper_model = 'turbo'
-silero_threshold = 0.5
+silero_threshold = 0.5 # min probability to be considered speech
 
 whisper_config = {
     'beam_size': 7,
@@ -39,7 +36,7 @@ whisper_config = {
 }
 
 # RUN PARAMS
-overwrite_files = True
+overwrite_files = False
 
 # Torch (pyannote) isn't familiar with MP3 files, so convert to wav for effective performance
 # Perform diarization to help separate narration in audio description from dialogue in original movie
@@ -53,7 +50,7 @@ for ii, mp3_filename in enumerate(mp3_files):
     
     vad_df_path = os.path.join(da.voice_activity_dir, f'{movie_name}-vad.parquet')
     seg_df_path = os.path.join(da.diarization_dir, f'{movie_name}-diarization.parquet')
-    curr_transcript_fp = os.path.join(da.transcription_dir, da.transcript_df_fp.format(movie_name=movie_name))
+    curr_transcript_fp = os.path.join(da.transcript_dir, da.transcript_df_fp.format(movie_name=movie_name))
     wav_filepath = os.path.join(da.trans_mp3_dir, f'{movie_name}_speech_only.wav')
 
     # If either diarization or transcript is missing, we'll need to generate the wav file

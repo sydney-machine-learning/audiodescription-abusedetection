@@ -28,9 +28,9 @@ whisper_config = {
     'condition_on_previous_text': True
 }
 
-import data_extraction as da
-import stt
-import utils
+import audiodescription_abusedetection.data_extraction as da
+import audiodescription_abusedetection.stt as stt
+import audiodescription_abusedetection.utils as utils
 
 import warnings
 warnings.filterwarnings("ignore")

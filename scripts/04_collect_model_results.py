@@ -33,7 +33,7 @@ from scipy import stats
 from tqdm import tqdm
 
 import utils
-import data_extraction as da
+import src.data_extraction as da
 import extract_sem_representation as esr
 
 import modelling as md
@@ -199,7 +199,7 @@ def fit_extra_classifiers(X_train, y_train, X_test, y_test, metadata) -> pd.Data
     scorer = make_scorer(f1_score, average='macro')
     for classifier_name, (model, params) in classifiers.items():
         new_row = {key: val for key, val in metadata.items()}
-        grid = BayesSearchCV(model, search_spaces=params, scoring=scorer, cv=val_set_cv, n_jobs=n_jobs, n_iter=10)
+        grid = BayesSearchCV(model, search_spaces=params, scoring=scorer, cv=val_set_cv, n_jobs=n_jobs, n_iter=50)
         grid.fit(X_train, y_train)
         classifier_best_model = grid.best_estimator_
         y_pred = classifier_best_model.predict(X_test)
