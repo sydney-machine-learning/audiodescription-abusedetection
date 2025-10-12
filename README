@@ -22,9 +22,21 @@ __Data Contact__
 
 ## Getting Started
 # TODO: add run time statistics to every step
+"config.json" - you need to manually create this and add your HuggingFace token as follows:
+
+```
+{
+    "hugging_face_token": "hf_XXX"
+}
+```
+pyannote.audio also requires you to accept the terms of usage of their model with your HF account, for example at this webpage for [speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1), [embedding](https://huggingface.co/pyannote/embedding)
+
+You will also need to allow some time to download the various models from hugging face when you first start the pipeline. (Est. total: 5Gb #TODO: check)
+
 ### Preprocessing (Not Required If Using Kaggle Dataset)
-# TODO: mention Kaggle Config, other downloads etc
+# TODO: mention HF config other downloads etc
 1) a) "01a_stt_pipeline.py" \[Required\] - extracts the transcriptions of each of the MP3 files. It creates artifacts for the voice activity detection (VAD), diarization (who speaks when) and final transcription. OOM error on the GPU can occur, so the script is setup to store progress as neatly as possible. The STT architecture was built using manually transcribed scripts to experiment with WER scores and the hyperparameter sweep is available in "diarization_pipeline_evaluation.ipynb".
+    --overwrite: commandline flag to enable overwriting transcription artifacts based on oldest creation dates
 
 b) "01b_subtitle_wer_check.py" \[Optional\] - extractions transcriptions of dialogue components of film (not narration sections) to assess similarity with the subtitles, to make sure subtitles are of high quality and for the same film as the audio description. The results are visualised in "subtitles_quality_visualisation.ipynb".
 
@@ -44,6 +56,7 @@ c) "01c_scrape_film_information.ipynb" \[Optional\] - scrapes available AudioVau
 
 ### Requirements
 
+python 3.12.10
 A step by step series of examples that tell you how to get a development/analysis env running
 
 Say what the step will be

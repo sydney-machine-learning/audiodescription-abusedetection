@@ -8,7 +8,6 @@ output_dir = os.path.join('output')
 os.makedirs(output_dir, exist_ok=True)
 
 sns.set_palette('colorblind')
-
 # sns.set_style('whitegrid')
 
 # The following settings were identified with assistance from ChatGPT, then tweaked based on experimentation

@@ -10,9 +10,9 @@ from . import data_extraction as da
 
 import silero_vad
 
-from pyannote.audio import Pipeline, Inference
+from pyannote.audio import Pipeline, Model, Inference
 from pyannote.core import Segment
-# from pyannote.audio.pipelines.utils.hook import ProgressHook
+from pyannote.audio.pipelines.utils.hook import ProgressHook
 
 import whisper
 
@@ -27,7 +27,30 @@ from termcolor import colored
 from tqdm import tqdm
 
 from typing import Dict
-   
+
+
+# CONFIG PARAMS
+use_vad = True # bool to use silero voice activity detection
+narr_cosine_sim_lim = 0.14 # minimum cosine similarity for narration segments
+min_seg_sec = 0 # minimum segment duration in seconds
+
+whisper_model = 'turbo'
+silero_threshold = 0.5 # min probability to be considered speech
+
+whisper_config = {
+    'beam_size': 7,
+    'no_speech_threshold': 0.1,
+    'condition_on_previous_text': True
+}
+
+pyannote_model_name = 'pyannote/speaker-diarization-community-1' # TODO: update cited models
+embedding_model_name = 'pyannote/embedding' # speechbrain/spkrec-ecapa-voxceleb
+
+# logging.getLogger('pyannote.audio').setLevel(logging.ERROR)
+# logging.getLogger('speechbrain').setLevel(logging.ERROR)
+# logging.getLogger('pytorch').setLevel(logging.ERROR)
+# logging.getLogger('pytorch_lightning').setLevel(logging.ERROR)
+
 
 def apply_silero_vad_to_wav(mp3_filename: str, wav_filepath: str, vad_out_fp: str, silero_threshold: float, credits_df: pd.DataFrame = None):
     movie_name = utils.remove_ext(mp3_filename)
@@ -59,17 +82,22 @@ def apply_silero_vad_to_wav(mp3_filename: str, wav_filepath: str, vad_out_fp: st
     del full_silero_audio
     
     
-def apply_diarization(movie_name: str, wav_filepath: str, pyannote_model: str, seg_df_path: str, vad_df_path: str, device):
+def apply_diarization(movie_name: str, wav_filepath: str, pyannote_model_name: str, seg_df_path: str, vad_df_path: str, use_excl_dz: bool, device):
     
     logging.info(f'Started pyannote pipeline for {movie_name}')
-    pyannote_pipeline = Pipeline.from_pretrained(pyannote_model, use_auth_token=utils.get_hf_token())
+    pyannote_pipeline = Pipeline.from_pretrained(pyannote_model_name, token=utils.get_hf_token())
     pyannote_pipeline.to(device)
 
-    # with ProgressHook() as hook:
-    dz = pyannote_pipeline(wav_filepath) # , hook=hook
+    with ProgressHook() as hook:
+        dz = pyannote_pipeline(wav_filepath, hook=hook)
 
     # Extract start and end times from segments object and split integer out from 'SPEAKER_x' labels
-    records = [(x[0].start, x[0].end, int(x[2].split('_')[-1])) for x in dz.itertracks(yield_label = True)]
+    # TODO: consider exclusive vs non-exclusive diarization
+    if use_excl_dz:
+        records = [(x[0].start, x[0].end, int(x[2].split('_')[-1])) for x in dz.exclusive_speaker_diarization.itertracks(yield_label=True)]
+    else:
+        records = [(x[0].start, x[0].end, int(x[2].split('_')[-1])) for x in dz.speaker_diarization.itertracks(yield_label=True)]
+
     segments_df = pd.DataFrame(records, columns=['start', 'end', 'speaker'])
 
     segments_df['start_frame'] = (da.sample_rate * segments_df['start']).astype(int)
@@ -144,7 +172,9 @@ def add_pyannote_cosine_sim(seg_df_path: str, wav_filepath: str, min_seg_sec: fl
     
     agg_seg_df = da.aggregate_segments(segments_df)
     agg_seg_df = agg_seg_df[agg_seg_df.is_dialogue.eq(False)]
-    embedding_model = Inference('pyannote/embedding', device=device, use_auth_token=utils.get_hf_token())
+
+    embedding_model = Model.from_pretrained(embedding_model_name, token=utils.get_hf_token())
+    embedding_model = Inference(embedding_model, device=device)
     narrator_segment = Segment(agg_seg_df.start.iloc[0], agg_seg_df.end.iloc[0])
     narrator_embedding = embedding_model.crop(wav_filepath, narrator_segment)
     
@@ -178,11 +208,11 @@ def calc_wer(movie_name: str):
 
     with open(os.path.join(da.transcript_dir, 'manual', f'{movie_name}.txt')) as fileobj:
         raw_txt = fileobj.read()
-    ref_txt = re.sub('[\.,"\?!:]', '', raw_txt).lower().replace('-', ' ').replace('\n', ' ')
+    ref_txt = re.sub(r'[\.,"\?!:]', '', raw_txt).lower().replace('-', ' ').replace('\n', ' ')
 
     trans_df = pd.read_parquet(os.path.join(da.transcript_dir, da.transcript_df_fp.format(movie_name=movie_name)))
     trans_df = trans_df[trans_df['text'].ne(' Thank you.')]
-    trans_txt = ''.join(trans_df.text.str.replace('[\.,"\?!]', '', regex=True)).lower().replace('-', ' ')
+    trans_txt = ''.join(trans_df.text.str.replace(r'[\.,"\?!]', '', regex=True)).lower().replace('-', ' ')
     
     wer, cer = load('wer'), load('cer')
     wer_score = wer.compute(predictions=[trans_txt], references=[ref_txt])

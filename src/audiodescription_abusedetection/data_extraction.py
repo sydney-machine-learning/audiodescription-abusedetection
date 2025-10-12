@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 
 import os
 import logging
@@ -7,8 +6,6 @@ import re
 from typing import List, Tuple
 
 from bs4 import BeautifulSoup
-
-import kaggle
 
 from . import utils
 
@@ -19,12 +16,15 @@ time_sep = '-->'
 sample_rate = 16000
 
 # Directory paths
-raw_dir = os.path.join('data', 'raw')
-interim_dir = os.path.join('data', 'interim')
-processed_dir = os.path.join('data', 'processed')
+data_dir = os.path.join('data')
+
+raw_dir = os.path.join(data_dir, 'raw')
+interim_dir = os.path.join(data_dir, 'interim')
+processed_dir = os.path.join(data_dir, 'processed')
+results_dir = os.path.join(data_dir, 'results')
 
 sub_dir = os.path.join(raw_dir, 'subtitles')
-sub_df_dir = os.path.join(interim_dir, 'all_subtitles.parquet')
+all_sub_df_dir = os.path.join(interim_dir, 'all_subtitles.parquet')
 
 voice_activity_dir = os.path.join(interim_dir, 'voice_activity')
 transcript_dir = os.path.join(interim_dir, 'transcripts')
@@ -35,6 +35,8 @@ trans_mp3_dir = os.path.join(raw_dir, 'audio_descriptions')
 
 manual_transcript_dir = os.path.join(raw_dir, 'manual_transcripts')
 credits_ts_fp = os.path.join(manual_transcript_dir, 'credit_removal_timestamps.csv')
+
+sub_wer_scores_fp = os.path.join(results_dir, 'subtitles_wer_scores.parquet')
 
 acb_ratings_fp = os.path.join(raw_dir, 'acb_film_ratings.csv')
 
@@ -176,7 +178,7 @@ def extract_single_subs_file(filepath: str):
     for raw_line in file_lines:
         line = raw_line.strip()
         
-        if re.match('^\d{1,}$', line):
+        if re.match(r'^\d{1,}$', line):
             continue
         elif time_sep in line:
             counter += 1
@@ -208,6 +210,28 @@ def extract_single_subs_file(filepath: str):
     subs_df['movie'] = movie_name
         
     return subs_df
+
+
+def get_or_create_subtitles_df():
+
+    if os.path.exists(all_sub_df_dir): return pd.read_parquet(all_sub_df_dir)
+
+    df_list = []
+    failed_count = 0
+
+    for file_path in os.listdir(sub_dir):
+        try:
+            curr_df = extract_single_subs_file(os.path.join(sub_dir, file_path))
+        except Exception as err:
+            failed_count += 1
+            logging.error(f'File: {file_path} could not successfully extract subtitles, as {err}')
+        else:
+            df_list.append(curr_df)
+
+    df = pd.concat(df_list)
+    df.to_parquet(all_sub_df_dir)
+
+    return df
 
 
 def aggregate_segments(df: pd.DataFrame):
