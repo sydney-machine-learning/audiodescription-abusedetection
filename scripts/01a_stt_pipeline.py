@@ -24,15 +24,23 @@ logging.getLogger('pytorch_lightning').setLevel(logging.ERROR)
 # RUN PARAMS
 parser = argparse.ArgumentParser(description='STT Pipeline')
 parser.add_argument('--overwrite', action='store_true', help='Flag to enable overwriting transcription artifacts based on oldest creation dates')
+parser.add_argument('--specific-movie', help='Pass in a single movie to run')
 args = parser.parse_args()
 
-logging.info(args.overwrite)
+mp3_files = da.get_sorted_mp3_list(rerun_all=args.overwrite)
+
+# Filter down to specific movie if one is provided
+if not args.specific_movie is None:
+    mp3_files = [x for x in mp3_files if args.specific_movie in x]
+
+    if len(mp3_files) == 0:
+        raise ValueError(f'Film specified: {args.specific_movie} does not exist')
+
 
 # Torch (pyannote) isn't familiar with MP3 files, so convert to wav for effective performance
+# Also utilise a light-weight voice activity detection (VAD) model to remove unnecessary audio processing
 # Perform diarization to help separate narration in audio description from dialogue in original movie
 # Finally use OpenAI's Whisper to convert to a transcript
-
-mp3_files = da.get_sorted_mp3_list(rerun_all=args.overwrite)
 
 for ii, mp3_filename in enumerate(mp3_files):
     
@@ -50,7 +58,7 @@ for ii, mp3_filename in enumerate(mp3_files):
             
     # Only perform diarization if parquet doesn't exist
     if not os.path.exists(seg_df_path) or args.overwrite:
-        stt.apply_diarization(movie_name, wav_filepath, stt.pyannote_model_name, seg_df_path, vad_df_path, device)
+        stt.apply_diarization(movie_name, wav_filepath, stt.pyannote_model_name, seg_df_path, vad_df_path, stt.use_excl_dz, device)
 
     # Only assess cosine similarity if it is missing
     seg_df = pd.read_parquet(seg_df_path)

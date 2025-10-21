@@ -33,6 +33,8 @@ from typing import Dict
 use_vad = True # bool to use silero voice activity detection
 narr_cosine_sim_lim = 0.14 # minimum cosine similarity for narration segments
 min_seg_sec = 0 # minimum segment duration in seconds
+use_excl_dz = True # Use exclusive diarization setting for pyannote model
+narr_min_dur = 500 # Minimum seconds speaker must speak for to be considered the narrator
 
 whisper_model = 'turbo'
 silero_threshold = 0.5 # min probability to be considered speech
@@ -52,7 +54,7 @@ embedding_model_name = 'pyannote/embedding' # speechbrain/spkrec-ecapa-voxceleb
 # logging.getLogger('pytorch_lightning').setLevel(logging.ERROR)
 
 
-def apply_silero_vad_to_wav(mp3_filename: str, wav_filepath: str, vad_out_fp: str, silero_threshold: float, credits_df: pd.DataFrame = None):
+def apply_silero_vad_to_wav(mp3_filename: str, wav_filepath: str, vad_out_fp: str, silero_threshold: float, snippets_df: pd.DataFrame = None):
     movie_name = utils.remove_ext(mp3_filename)
 
     logging.info(f'Applying Silero VAD to {movie_name}')
@@ -60,9 +62,10 @@ def apply_silero_vad_to_wav(mp3_filename: str, wav_filepath: str, vad_out_fp: st
 
     full_silero_audio = silero_vad.read_audio(os.path.join(da.trans_mp3_dir, mp3_filename))
 
-    if credits_df is not None and movie_name in credits_df.movie.values:
-        credits_ts = credits_df[credits_df.movie.eq(movie_name)]['credits_start_sec'].iloc[0]
-        full_silero_audio = full_silero_audio[:int(credits_ts*da.sample_rate)]
+    if snippets_df is not None and movie_name in snippets_df.movie.values:
+        start_sec, end_sec = snippets_df[snippets_df.movie.eq(movie_name)][['start_sec', 'end_sec']].iloc[0]
+        start_snapshot, end_snapshot = int(start_sec*da.sample_rate), int(end_sec*da.sample_rate)
+        full_silero_audio = full_silero_audio[start_snapshot:end_snapshot]
 
     speech_timestamps = silero_vad.get_speech_timestamps(full_silero_audio, silero_model, threshold=silero_threshold, speech_pad_ms=200)
     vad_df = pd.DataFrame(speech_timestamps).rename(columns={'start': 'start_frames', 'end': 'end_frames'})
@@ -82,7 +85,7 @@ def apply_silero_vad_to_wav(mp3_filename: str, wav_filepath: str, vad_out_fp: st
     del full_silero_audio
     
     
-def apply_diarization(movie_name: str, wav_filepath: str, pyannote_model_name: str, seg_df_path: str, vad_df_path: str, use_excl_dz: bool, device):
+def apply_diarization(movie_name: str, wav_filepath: str, pyannote_model_name: str, seg_df_path: str, vad_df_path: str, use_excl_dz: bool, narr_min_dur: int, device):
     
     logging.info(f'Started pyannote pipeline for {movie_name}')
     pyannote_pipeline = Pipeline.from_pretrained(pyannote_model_name, token=utils.get_hf_token())
@@ -104,10 +107,23 @@ def apply_diarization(movie_name: str, wav_filepath: str, pyannote_model_name: s
     segments_df['end_frame'] = (da.sample_rate * segments_df['end']).astype(int)
     segments_df['duration'] = segments_df['end'] - segments_df['start']
 
-    # Check duration of first speaker
-    first_speaker_dur = segments_df[segments_df.speaker.eq(segments_df.speaker.iloc[0])].duration.sum()
-    # Assume narrator speaks first (describing opening logos etc), but if duration is quite low, check second speaker
-    narrator_id = segments_df['speaker'].iloc[0] if first_speaker_dur > 500 else segments_df.speaker.unique()[1]
+
+    # Assume narrator speaks first (describing opening logos etc), but if duration is quite low, search for speaker
+    # This occurs because sometimes a brief generic narrator is used to describe initial logos, then main narrator continues
+
+    narrator_found = False
+    speaker_pos = 0
+    while not narrator_found and speaker_pos < segments_df.speaker.nunique():
+        speaker_dur = segments_df[segments_df.speaker.eq(segments_df.speaker.iloc[speaker_pos])].duration.sum()
+
+        if speaker_dur > narr_min_dur:
+            narrator_found = True
+            narrator_id = segments_df['speaker'].iloc[speaker_pos]
+        else:
+            speaker_pos += 1
+        
+    if not narrator_found:
+        raise ValueError(f'No suitable narrator was found for {movie_name} during diarization')
 
     segments_df['is_dialogue'] = segments_df['speaker'].ne(narrator_id)
     segments_df['movie_name'] = movie_name

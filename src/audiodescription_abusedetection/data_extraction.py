@@ -34,7 +34,7 @@ diarization_dir = os.path.join(interim_dir, 'diarization_segments')
 trans_mp3_dir = os.path.join(raw_dir, 'audio_descriptions')
 
 manual_transcript_dir = os.path.join(raw_dir, 'manual_transcripts')
-credits_ts_fp = os.path.join(manual_transcript_dir, 'credit_removal_timestamps.csv')
+manual_snippet_ts_fp = os.path.join(manual_transcript_dir, 'manual_snippet_timestamps.csv')
 
 sub_wer_scores_fp = os.path.join(results_dir, 'subtitles_wer_scores.parquet')
 
@@ -83,8 +83,8 @@ def remove_html(text):
     return BeautifulSoup(text, 'html.parser').get_text(separator=' ')
 
 
-def get_credits_timestamps():
-    return pd.read_csv(credits_ts_fp)
+def get_manual_snippet_timestamps():
+    return pd.read_csv(manual_snippet_ts_fp)
 
 
 def get_acb_film_ratings():
